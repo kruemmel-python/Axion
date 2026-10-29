@@ -947,6 +947,35 @@ void inspectSelectedTableRow() {
 
 // Schaltet Steuerelemente je nach Modus ein/aus & platziert sie sauber
 void updateControlLayout(int w, int h) {
+    bool isModal = (g_hud.settingsModalOpen || g_hud.infoModalOpen);
+    if (isModal) {
+        auto hideCtl = [](HWND ctrl) { if (ctrl) ShowWindow(ctrl, SW_HIDE); };
+        hideCtl(g_hud.rows);
+        hideCtl(g_hud.editor);
+        hideCtl(g_hud.strategyCombo);
+        hideCtl(g_hud.chainModeCombo);
+        hideCtl(g_hud.lineModeCombo);
+        hideCtl(g_hud.seedBox);
+        hideCtl(g_hud.countBox);
+        hideCtl(g_hud.runBtn);
+        hideCtl(g_hud.stopBtn);
+        hideCtl(g_hud.chainFromBtn);
+        hideCtl(g_hud.reportBtn);
+        hideCtl(g_hud.searchBox);
+        hideCtl(g_hud.searchBtn);
+        hideCtl(g_hud.saveBtn);
+        hideCtl(g_hud.testBtn);
+        hideCtl(g_hud.plotBtn);
+        hideCtl(g_hud.evoFamACombo);
+        hideCtl(g_hud.evoFamBCombo);
+        hideCtl(g_hud.evoTargetFamBox);
+        hideCtl(g_hud.evoMetaFusionBtn);
+        hideCtl(g_hud.evoContinuousBtn);
+        hideCtl(g_hud.evoRollbackBtn);
+        hideCtl(g_hud.commandInput);
+        return;
+    }
+
     bool isNexus = (g_hud.currentMode == WorkspaceMode::OrbitalNexus);
     bool isLab = (g_hud.currentMode == WorkspaceMode::ResearchLab);
     bool isSrc = (g_hud.currentMode == WorkspaceMode::SourceDatabase);
@@ -1600,12 +1629,15 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
     // 7. MODAL: EINSTELLUNGSMENÜ (SETTINGS)
     if (g_hud.settingsModalOpen) {
-        RECT fullRc{0, 0, w, h};
+        RECT fullRc{0, 64, w, h};
         HBRUSH modalDimB = CreateSolidBrush(RGB(2, 4, 8));
         FillRect(memDc, &fullRc, modalDimB);
         DeleteObject(modalDimB);
 
-        RECT mBox{w / 2 - 360, h / 2 - 250, w / 2 + 360, h / 2 + 250};
+        int mw = 720, mh = 500;
+        int mx0 = (w - mw) / 2;
+        int my0 = 64 + (h - 64 - mh) / 2;
+        RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
         drawChamferedPolygon(memDc, mBox, 16, th.bgPanel, th.accentTertiary, 2);
 
         SelectObject(memDc, g_hud.fontMonoSmall);
@@ -1705,12 +1737,15 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
     // 8. MODAL: INFO & PROVENIENZ
     if (g_hud.infoModalOpen) {
-        RECT fullRc{0, 0, w, h};
+        RECT fullRc{0, 64, w, h};
         HBRUSH modalDimB = CreateSolidBrush(RGB(2, 4, 8));
         FillRect(memDc, &fullRc, modalDimB);
         DeleteObject(modalDimB);
 
-        RECT mBox{w / 2 - 320, h / 2 - 220, w / 2 + 320, h / 2 + 220};
+        int mw = 640, mh = 440;
+        int mx0 = (w - mw) / 2;
+        int my0 = 64 + (h - 64 - mh) / 2;
+        RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
         drawChamferedPolygon(memDc, mBox, 16, th.bgPanel, th.accentPrimary, 2);
 
         SelectObject(memDc, g_hud.fontMonoSmall);
@@ -1965,6 +2000,21 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         break;
     }
 
+    case WM_KEYDOWN: {
+        if (wp == VK_ESCAPE) {
+            if (g_hud.settingsModalOpen || g_hud.infoModalOpen) {
+                g_hud.settingsModalOpen = false;
+                g_hud.infoModalOpen = false;
+                RECT rc{};
+                GetClientRect(hwnd, &rc);
+                updateControlLayout(rc.right, rc.bottom);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+            }
+        }
+        break;
+    }
+
     case WM_COMMAND: {
         int id = LOWORD(wp);
         switch (id) {
@@ -2053,7 +2103,10 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int h = rc.bottom;
 
         if (g_hud.settingsModalOpen) {
-            RECT mBox{w / 2 - 360, h / 2 - 250, w / 2 + 360, h / 2 + 250};
+            int mw = 720, mh = 500;
+            int mx0 = (w - mw) / 2;
+            int my0 = 64 + (h - 64 - mh) / 2;
+            RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
             int cardW = (mBox.right - mBox.left - 64) / 2;
             int cardH = 58;
             g_hud.hoveredThemeCard = -1;
@@ -2151,11 +2204,16 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         // Settings Modal Klicks
         if (g_hud.settingsModalOpen) {
-            RECT mBox{w / 2 - 360, h / 2 - 250, w / 2 + 360, h / 2 + 250};
+            int mw = 720, mh = 500;
+            int mx0 = (w - mw) / 2;
+            int my0 = 64 + (h - 64 - mh) / 2;
+            RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
             RECT sCloseRc{mBox.right - 140, mBox.bottom - 46, mBox.right - 24, mBox.bottom - 16};
-            if (mx >= sCloseRc.left && mx <= sCloseRc.right && my >= sCloseRc.top && my <= sCloseRc.bottom) {
+            if ((mx >= sCloseRc.left && mx <= sCloseRc.right && my >= sCloseRc.top && my <= sCloseRc.bottom) ||
+                (mx < mBox.left || mx > mBox.right || my < mBox.top || my > mBox.bottom)) {
                 g_hud.settingsModalOpen = false;
-                InvalidateRect(hwnd, nullptr, FALSE);
+                updateControlLayout(w, h);
+                InvalidateRect(hwnd, nullptr, TRUE);
                 return 0;
             }
             if (g_hud.hoveredThemeCard >= 0) {
@@ -2194,24 +2252,34 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         // Info Modal Klicks
         if (g_hud.infoModalOpen) {
-            RECT mBox{w / 2 - 320, h / 2 - 220, w / 2 + 320, h / 2 + 220};
+            int mw = 640, mh = 440;
+            int mx0 = (w - mw) / 2;
+            int my0 = 64 + (h - 64 - mh) / 2;
+            RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
             RECT mCloseRc{mBox.right - 140, mBox.bottom - 46, mBox.right - 24, mBox.bottom - 16};
-            if (mx >= mCloseRc.left && mx <= mCloseRc.right && my >= mCloseRc.top && my <= mCloseRc.bottom) {
+            if ((mx >= mCloseRc.left && mx <= mCloseRc.right && my >= mCloseRc.top && my <= mCloseRc.bottom) ||
+                (mx < mBox.left || mx > mBox.right || my < mBox.top || my > mBox.bottom)) {
                 g_hud.infoModalOpen = false;
-                InvalidateRect(hwnd, nullptr, FALSE);
+                updateControlLayout(w, h);
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
             }
             return 0;
         }
 
         // Header Buttons
         if (g_hud.hoveredTopButton == 1) { // Settings
-            g_hud.settingsModalOpen = true;
-            InvalidateRect(hwnd, nullptr, FALSE);
+            g_hud.settingsModalOpen = !g_hud.settingsModalOpen;
+            g_hud.infoModalOpen = false;
+            updateControlLayout(w, h);
+            InvalidateRect(hwnd, nullptr, TRUE);
             return 0;
         }
         if (g_hud.hoveredTopButton == 2) { // Info
-            g_hud.infoModalOpen = true;
-            InvalidateRect(hwnd, nullptr, FALSE);
+            g_hud.infoModalOpen = !g_hud.infoModalOpen;
+            g_hud.settingsModalOpen = false;
+            updateControlLayout(w, h);
+            InvalidateRect(hwnd, nullptr, TRUE);
             return 0;
         }
         if (g_hud.hoveredTopButton == 3) { // Min
