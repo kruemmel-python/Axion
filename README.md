@@ -119,6 +119,44 @@ Ausführliche Details finden Sie in [docs/MATHEMATICAL_FOUNDATIONS.md](docs/MATH
 
 ---
 
+## 📚 Mathematischer Wissenskorpus (2,37 Millionen Formeln & Theoreme)
+
+Axion greift auf einen umfangreichen mathematischen Wissenskorpus (`research.sqlite`) zu, der über 2,36 Millionen mathematische Definitionen, Typen, Prämissen und Formeln umfasst:
+* **`declarations`:** **2.369.933** mathematische Aussagen & Theoreme
+* **`imports`:** **149.204** relationale Modul-Abhängigkeiten
+* **`files`:** **48.266** Quell-Dateien
+
+### 📥 Download der Datenbank
+Die vorbereitete Datenbank steht als komprimiertes Release-Asset bereit:
+* **Asset-Download:** [Axion-Mathematical-Corpus-2.3M-research-db.zip](https://github.com/kruemmel-python/Axion/releases/download/v1.0.0/Axion-Mathematical-Corpus-2.3M-research-db.zip)
+
+### 🔌 Einbindung in Axion
+
+1. **Entpacken:**  
+   Entpacken Sie das Archiv und legen Sie die Datei `research.sqlite` in den Ordner `data/` innerhalb Ihres Axion-Verzeichnisses:
+   ```text
+   H:\Axion\data\research.sqlite
+   ```
+   *(Alternativ kann die Datei auch direkt im Stammverzeichnis als `H:\Axion\research.sqlite` liegen.)*
+
+2. **Nutzung in der Axion Research IDE (`axion_ide.exe`):**
+   * Starten Sie die IDE über `START_AXION_IDE.cmd`.
+   * Wechseln Sie zum Tab **„Quelldatenbank“** oder **„K4D Research Lab“**.
+   * Die IDE prüft beim Start automatisch `data/research.sqlite` und bindet den Korpus direkt ein.
+   * Alternativ können Sie einen beliebigen Speicherort über das Eingabefeld oder den Dateidialog auswählen.
+
+3. **Nutzung über die Axion Konsole (`axion_engine.exe`):**
+   * **Statistiken des Korpus abrufen:**
+     ```cmd
+     axion_engine.exe stats data\research.sqlite
+     ```
+   * **Forschungszyklus mit den 6 K4D-Strategien starten:**
+     ```cmd
+     axion_engine.exe cycle-k4d-six data\research.sqlite results.sqlite research_output 10 42
+     ```
+
+---
+
 ## 🛠️ Bauen & Starten
 
 ### Voraussetzungen

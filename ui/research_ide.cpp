@@ -2576,6 +2576,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show){
     }
     projectRoot = p.parent_path().parent_path().parent_path().wstring();
 
+    if (fs::exists(fs::path(projectRoot) / L"data" / L"research.sqlite")) {
+        sourceDb = (fs::path(projectRoot) / L"data" / L"research.sqlite").wstring();
+    } else if (fs::exists(fs::path(projectRoot) / L"research.sqlite")) {
+        sourceDb = (fs::path(projectRoot) / L"research.sqlite").wstring();
+    }
     if (fs::exists(fs::path(projectRoot) / L"k4d_six_results.sqlite")) {
         k4dResultsDb = (fs::path(projectRoot) / L"k4d_six_results.sqlite").wstring();
     }
