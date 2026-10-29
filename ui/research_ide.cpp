@@ -273,6 +273,8 @@ struct HudState {
     bool impulseBtnHovered = false;
     bool sendBtnHovered = false;
     bool selftestBtnHovered = false;
+    int selftestState = 0; // 0=Bereit, 1=Läuft, 2=Erfolgreich (18/18 PASSED), 3=Fehler
+    std::wstring lastProcessCmd;
 
     // Modals
     bool infoModalOpen = false;
@@ -448,6 +450,12 @@ void applyThemeToControls() {
     }
 }
 
+// Forward Declarations für dynamische Re-Layouts
+void updateControlLayout(int w, int h);
+void refreshK4dLab();
+void refreshCppEditorLab();
+void refreshMetaFusion();
+
 // --- Schriftarten spürbar aktualisieren (Kompakt, Standard, Groß) ---
 void rebuildFonts() {
     if (g_hud.fontDisplayTitle) DeleteObject(g_hud.fontDisplayTitle);
@@ -465,15 +473,15 @@ void rebuildFonts() {
     int sizeMid = 14;
 
     if (g_hud.currentFontSize == FontSizeOption::Compact) {
-        sizeUi = 10;
-        sizeEditor = 11;
-        sizeTitle = 17;
-        sizeMid = 11;
+        sizeUi = 11;
+        sizeEditor = 12;
+        sizeTitle = 18;
+        sizeMid = 12;
     } else if (g_hud.currentFontSize == FontSizeOption::Large) {
-        sizeUi = 18;
-        sizeEditor = 20;
-        sizeTitle = 30;
-        sizeMid = 19;
+        sizeUi = 16;
+        sizeEditor = 17;
+        sizeTitle = 26;
+        sizeMid = 16;
     }
 
     g_hud.fontDisplayTitle = CreateFontW(-sizeTitle, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
@@ -494,7 +502,7 @@ void rebuildFonts() {
     g_hud.fontMono = CreateFontW(-sizeEditor, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Consolas");
-    g_hud.fontMonoSmall = CreateFontW(-(sizeUi - 2), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_hud.fontMonoSmall = CreateFontW(-(sizeUi - 1), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Consolas");
     g_hud.fontEditor = CreateFontW(-sizeEditor, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
@@ -522,7 +530,17 @@ void rebuildFonts() {
         if (hdr) SendMessageW(hdr, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontSansBold), TRUE);
         InvalidateRect(g_hud.rows, nullptr, TRUE);
     }
+
     if (g_hud.hwnd) {
+        RECT rc{};
+        GetClientRect(g_hud.hwnd, &rc);
+        updateControlLayout(rc.right, rc.bottom);
+
+        // Tabelle mit neu skalierten Spaltenbreiten sofort neu befüllen
+        if (g_hud.currentMode == WorkspaceMode::ResearchLab) refreshK4dLab();
+        else if (g_hud.currentMode == WorkspaceMode::CppEditorLab) refreshCppEditorLab();
+        else if (g_hud.currentMode == WorkspaceMode::MetaFusion) refreshMetaFusion();
+
         InvalidateRect(g_hud.hwnd, nullptr, TRUE);
     }
 }
@@ -767,19 +785,44 @@ void querySqliteToTable(const fs::path& dbPath, const char* sql, const std::stri
         sqlite3_bind_text(st, 1, arg.c_str(), static_cast<int>(arg.size()), nullptr);
     }
 
+    float scaleFactor = 1.0f;
+    if (g_hud.currentFontSize == FontSizeOption::Compact) scaleFactor = 0.88f;
+    else if (g_hud.currentFontSize == FontSizeOption::Large) scaleFactor = 1.25f;
+
     std::vector<std::wstring> colNames;
     std::vector<int> colWidths;
     int cols = sqlite3_column_count(st);
     for (int i = 0; i < cols; ++i) {
         std::wstring name = wfrom(reinterpret_cast<const unsigned char*>(sqlite3_column_name(st, i)));
         colNames.push_back(name);
-        if (i == 0) colWidths.push_back(65);
-        else if (name == L"Strategie") colWidths.push_back(120);
-        else if (name == L"Linie") colWidths.push_back(140);
-        else if (name == L"Status") colWidths.push_back(160);
-        else if (name == L"Deklaration") colWidths.push_back(240);
-        else if (name == L"Formel") colWidths.push_back(220);
-        else colWidths.push_back(130);
+
+        int baseW = 140;
+        if (i == 0 && (name == L"ID" || name == L"id")) baseW = 70;
+        else if (name == L"Strategie") baseW = 140;
+        else if (name == L"Linie") baseW = 150;
+        else if (name == L"Status") baseW = 165;
+        else if (name == L"Tiefe") baseW = 85;
+        else if (name == L"Eltern_ID") baseW = 100;
+        else if (name == L"Quelle_A") baseW = 150;
+        else if (name == L"Quelle_B") baseW = 150;
+        else if (name == L"Moduldatei") baseW = 230;
+        else if (name == L"Deklaration") baseW = 280;
+        else if (name == L"Typ") baseW = 110;
+        else if (name == L"Zeile") baseW = 90;
+        else if (name == L"Formel") baseW = 260;
+        else if (name == L"Kandidat_ns") baseW = 140;
+        else if (name == L"Referenz_ns") baseW = 140;
+        else if (name == L"Resultat") baseW = 150;
+        else if (name == L"Header") baseW = 210;
+        else if (name == L"Forschungsfamilie") baseW = 190;
+        else if (name == L"Generation") baseW = 120;
+        else if (name == L"Komplexitaet") baseW = 135;
+        else if (name == L"Validierungsstatus") baseW = 185;
+        else if (name == L"Fingerabdruck") baseW = 195;
+        else if (name == L"Mathematische_Hypothese") baseW = 340;
+        else baseW = std::max(140, static_cast<int>(name.length() * 12 + 28));
+
+        colWidths.push_back(static_cast<int>(baseW * scaleFactor));
     }
     setTableColumns(colNames, colWidths);
 
@@ -1065,18 +1108,37 @@ void updateControlLayout(int w, int h) {
         if (ctrl) ShowWindow(ctrl, visible ? SW_SHOW : SW_HIDE);
     };
 
-    int ctrlY = topBarH + 8;
+    float scale = 1.0f;
+    int ctrlH = 28;
+    int boxH = 26;
+    if (g_hud.currentFontSize == FontSizeOption::Compact) {
+        scale = 0.90f;
+        ctrlH = 24;
+        boxH = 24;
+    } else if (g_hud.currentFontSize == FontSizeOption::Large) {
+        scale = 1.20f;
+        ctrlH = 32;
+        boxH = 30;
+    }
+
+    auto sc = [scale](int val) -> int {
+        return static_cast<int>(val * scale);
+    };
+
+    int ctrlY = topBarH + (ctrlH == 32 ? 6 : 8);
 
     // 1. K4D Lab
     if (isLab) {
-        MoveWindow(g_hud.strategyCombo, 32, ctrlY, 150, 200, TRUE);
-        MoveWindow(g_hud.chainModeCombo, 190, ctrlY, 160, 200, TRUE);
-        MoveWindow(g_hud.lineModeCombo, 358, ctrlY, 160, 200, TRUE);
-        MoveWindow(g_hud.seedBox, 526, ctrlY, 80, 26, TRUE);
-        MoveWindow(g_hud.runBtn, 614, ctrlY, 155, 28, TRUE);
-        MoveWindow(g_hud.stopBtn, 776, ctrlY, 70, 28, TRUE);
-        MoveWindow(g_hud.chainFromBtn, 854, ctrlY, 195, 28, TRUE);
-        MoveWindow(g_hud.reportBtn, 1056, ctrlY, 155, 28, TRUE);
+        int cx = 32;
+        int gap = 8;
+        MoveWindow(g_hud.strategyCombo, cx, ctrlY, sc(155), 200, TRUE);  cx += sc(155) + gap;
+        MoveWindow(g_hud.chainModeCombo, cx, ctrlY, sc(155), 200, TRUE); cx += sc(155) + gap;
+        MoveWindow(g_hud.lineModeCombo, cx, ctrlY, sc(165), 200, TRUE);  cx += sc(165) + gap;
+        MoveWindow(g_hud.seedBox, cx, ctrlY + 1, sc(85), boxH, TRUE);   cx += sc(85) + gap;
+        MoveWindow(g_hud.runBtn, cx, ctrlY, sc(165), ctrlH, TRUE);       cx += sc(165) + gap;
+        MoveWindow(g_hud.stopBtn, cx, ctrlY, sc(70), ctrlH, TRUE);       cx += sc(70) + gap;
+        MoveWindow(g_hud.chainFromBtn, cx, ctrlY, sc(240), ctrlH, TRUE); cx += sc(240) + gap;
+        MoveWindow(g_hud.reportBtn, cx, ctrlY, sc(175), ctrlH, TRUE);
     }
     setVis(g_hud.strategyCombo, isLab);
     setVis(g_hud.chainModeCombo, isLab);
@@ -1089,9 +1151,12 @@ void updateControlLayout(int w, int h) {
 
     // 2. Quelldatenbank
     if (isSrc) {
-        MoveWindow(g_hud.searchBox, 32, ctrlY, 320, 26, TRUE);
-        MoveWindow(g_hud.countBox, 360, ctrlY, 60, 26, TRUE);
-        MoveWindow(g_hud.searchBtn, 428, ctrlY, 130, 28, TRUE);
+        int cx = 32;
+        int gap = 8;
+        int searchW = std::max(sc(320), static_cast<int>(w * 0.28));
+        MoveWindow(g_hud.searchBox, cx, ctrlY + 1, searchW, boxH, TRUE); cx += searchW + gap;
+        MoveWindow(g_hud.countBox, cx, ctrlY + 1, sc(65), boxH, TRUE);  cx += sc(65) + gap;
+        MoveWindow(g_hud.searchBtn, cx, ctrlY, sc(150), ctrlH, TRUE);
     }
     setVis(g_hud.searchBox, isSrc);
     setVis(g_hud.countBox, isSrc);
@@ -1099,9 +1164,11 @@ void updateControlLayout(int w, int h) {
 
     // 3. C++ Editor Lab
     if (isCpp) {
-        MoveWindow(g_hud.saveBtn, 32, ctrlY, 185, 28, TRUE);
-        MoveWindow(g_hud.testBtn, 225, ctrlY, 180, 28, TRUE);
-        MoveWindow(g_hud.plotBtn, 413, ctrlY, 170, 28, TRUE);
+        int cx = 32;
+        int gap = 8;
+        MoveWindow(g_hud.saveBtn, cx, ctrlY, sc(210), ctrlH, TRUE); cx += sc(210) + gap;
+        MoveWindow(g_hud.testBtn, cx, ctrlY, sc(185), ctrlH, TRUE); cx += sc(185) + gap;
+        MoveWindow(g_hud.plotBtn, cx, ctrlY, sc(185), ctrlH, TRUE);
     }
     setVis(g_hud.saveBtn, isCpp);
     setVis(g_hud.testBtn, isCpp);
@@ -1109,12 +1176,14 @@ void updateControlLayout(int w, int h) {
 
     // 4. Meta-Fusion
     if (isEvo) {
-        MoveWindow(g_hud.evoFamACombo, 32, ctrlY, 170, 200, TRUE);
-        MoveWindow(g_hud.evoFamBCombo, 210, ctrlY, 170, 200, TRUE);
-        MoveWindow(g_hud.evoTargetFamBox, 388, ctrlY, 160, 26, TRUE);
-        MoveWindow(g_hud.evoMetaFusionBtn, 556, ctrlY, 180, 28, TRUE);
-        MoveWindow(g_hud.evoContinuousBtn, 744, ctrlY, 170, 28, TRUE);
-        MoveWindow(g_hud.evoRollbackBtn, 922, ctrlY, 180, 28, TRUE);
+        int cx = 32;
+        int gap = 8;
+        MoveWindow(g_hud.evoFamACombo, cx, ctrlY, sc(195), 200, TRUE); cx += sc(195) + gap;
+        MoveWindow(g_hud.evoFamBCombo, cx, ctrlY, sc(195), 200, TRUE); cx += sc(195) + gap;
+        MoveWindow(g_hud.evoTargetFamBox, cx, ctrlY + 1, sc(170), boxH, TRUE); cx += sc(170) + gap;
+        MoveWindow(g_hud.evoMetaFusionBtn, cx, ctrlY, sc(195), ctrlH, TRUE); cx += sc(195) + gap;
+        MoveWindow(g_hud.evoContinuousBtn, cx, ctrlY, sc(180), ctrlH, TRUE); cx += sc(180) + gap;
+        MoveWindow(g_hud.evoRollbackBtn, cx, ctrlY, sc(210), ctrlH, TRUE);
     }
     setVis(g_hud.evoFamACombo, isEvo);
     setVis(g_hud.evoFamBCombo, isEvo);
@@ -1181,6 +1250,10 @@ void launchProcess(const std::wstring& cmdArgs) {
         return;
     }
     g_hud.cycleBoost = 2.5;
+    g_hud.lastProcessCmd = cmdArgs;
+    if (cmdArgs.find(L"selftest") != std::wstring::npos) {
+        g_hud.selftestState = 1; // Läuft
+    }
 
     std::wstring cmdLine = L"\"" + g_hud.engineExePath.wstring() + L"\" " + cmdArgs;
     std::vector<wchar_t> cmdBuf(cmdLine.begin(), cmdLine.end());
@@ -1196,7 +1269,11 @@ void launchProcess(const std::wstring& cmdArgs) {
         g_hud.processRunning = true;
         g_hud.liveFooterStatus = L"Ausführung läuft (PID " + std::to_wstring(g_hud.activeProcess.dwProcessId) + L") • Orakel arbeitet...";
     } else {
-        g_hud.liveFooterStatus = L"Prozess konnte nicht gestartet werden.";
+        g_hud.processRunning = false;
+        if (cmdArgs.find(L"selftest") != std::wstring::npos) {
+            g_hud.selftestState = 3; // Fehler
+        }
+        g_hud.liveFooterStatus = L"Prozess konnte nicht gestartet werden: " + g_hud.engineExePath.wstring();
     }
 }
 
@@ -1256,9 +1333,13 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
     SelectObject(memDc, g_hud.fontDisplayTitle);
     SetTextColor(memDc, RGB(255, 255, 255));
+    SIZE axionSz{};
+    GetTextExtentPoint32W(memDc, L"AXION", 5, &axionSz);
     TextOutW(memDc, 48, 18, L"AXION", 5);
 
-    RECT verBadgeRc{112, 20, 230, 38};
+    int badgeLeft = 48 + axionSz.cx + 12;
+    int badgeWidth = (g_hud.currentFontSize == FontSizeOption::Large ? 135 : 118);
+    RECT verBadgeRc{badgeLeft, 20, badgeLeft + badgeWidth, 38};
     drawChamferedPolygon(memDc, verBadgeRc, 4, RGB(10, 32, 48), th.accentPrimary, 1);
     SelectObject(memDc, g_hud.fontMonoSmall);
     SetTextColor(memDc, th.accentPrimary);
@@ -1268,23 +1349,26 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
     SetTextColor(memDc, th.textMuted);
     TextOutW(memDc, 48, 42, L"MDraft KR Enterprise • Autonome Mathematische Forschung & Code-Synthese • Ralf Krümmel", 86);
 
-    // Mitte: Status-Pill
+    // Mitte: Status-Pill (skaliert, keine abgeschnittenen Texte)
     if (w >= 1200) {
-        RECT midPillRc{w / 2 - 280, 18, w / 2 + 280, 46};
+        int pillHalfW = (g_hud.currentFontSize == FontSizeOption::Large ? 380 : 340);
+        RECT midPillRc{w / 2 - pillHalfW, 18, w / 2 + pillHalfW, 46};
         drawChamferedPolygon(memDc, midPillRc, 8, th.bgPanel, th.borderMuted, 1);
         SelectObject(memDc, g_hud.fontMonoSmall);
 
+        int segW = (midPillRc.right - midPillRc.left - 24) / 3;
+
         SetTextColor(memDc, th.accentPrimary);
-        RECT r1{midPillRc.left + 12, midPillRc.top + 6, midPillRc.left + 170, midPillRc.bottom - 4};
-        DrawTextW(memDc, L"Lean 4 Orakel: Bereit", -1, &r1, DT_LEFT | DT_SINGLELINE);
+        RECT r1{midPillRc.left + 12, midPillRc.top + 6, midPillRc.left + 12 + segW, midPillRc.bottom - 4};
+        DrawTextW(memDc, L"Lean 4 Orakel: Bereit", -1, &r1, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
         SetTextColor(memDc, th.accentSecondary);
-        RECT r2{midPillRc.left + 185, midPillRc.top + 6, midPillRc.left + 355, midPillRc.bottom - 4};
-        DrawTextW(memDc, L"20 / 20 .exe Bereit", -1, &r2, DT_LEFT | DT_SINGLELINE);
+        RECT r2{r1.right, midPillRc.top + 6, r1.right + segW, midPillRc.bottom - 4};
+        DrawTextW(memDc, L"20 / 20 .exe Bereit", -1, &r2, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
         SetTextColor(memDc, th.accentTertiary);
-        RECT r3{midPillRc.left + 370, midPillRc.top + 6, midPillRc.right - 12, midPillRc.bottom - 4};
-        DrawTextW(memDc, L"DB: Read-Only (2.3M)", -1, &r3, DT_LEFT | DT_SINGLELINE);
+        RECT r3{r2.right, midPillRc.top + 6, midPillRc.right - 12, midPillRc.bottom - 4};
+        DrawTextW(memDc, L"DB: Read-Only (2.3M)", -1, &r3, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
     // Header-Buttons: [SETTINGS] [INFO] [–] [□] [×]
@@ -1547,26 +1631,45 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
     }
     else if (g_hud.currentMode == WorkspaceMode::AgentBridge) {
         // C++ AGENT BRIDGE
-        RECT bridgeRc{w / 2 - 420, 80, w / 2 + 420, h - 84};
+        int bridgeW = std::min(1240, w - 64);
+        RECT bridgeRc{w / 2 - bridgeW / 2, 70, w / 2 + bridgeW / 2, h - 74};
         drawChamferedPolygon(memDc, bridgeRc, 16, th.bgPanel, th.accentPrimary, 2);
 
+        // Header
         SelectObject(memDc, g_hud.fontMonoSmall);
         SetTextColor(memDc, th.accentPrimary);
-        TextOutW(memDc, bridgeRc.left + 24, bridgeRc.top + 20, L"ARCHITEKTUR-BRÜCKE // H:/Axion/KR_BUILD/Release", 47);
+        TextOutW(memDc, bridgeRc.left + 24, bridgeRc.top + 16, L"ARCHITEKTUR-BRÜCKE // H:/Axion/KR_BUILD/Release", 47);
 
         SelectObject(memDc, g_hud.fontDisplayLarge);
         SetTextColor(memDc, RGB(255, 255, 255));
-        TextOutW(memDc, bridgeRc.left + 24, bridgeRc.top + 40, L"C++20 Subprozess- & Artefakt-Matrix", 35);
+        TextOutW(memDc, bridgeRc.left + 24, bridgeRc.top + 34, L"C++20 Subprozess-Orchester & Formale Integrität", 47);
+
+        // Infobox 1: Was ist die Agentenbrücke?
+        RECT infoBox1Rc{bridgeRc.left + 24, bridgeRc.top + 62, bridgeRc.right - 24, bridgeRc.top + 130};
+        drawChamferedPolygon(memDc, infoBox1Rc, 8, th.bgCard, th.borderMuted, 1);
+
+        SelectObject(memDc, g_hud.fontSansBold);
+        SetTextColor(memDc, th.accentTertiary);
+        TextOutW(memDc, infoBox1Rc.left + 14, infoBox1Rc.top + 8, L"WAS IST DIE AGENTENBRÜCKE? (Subprozess-Isolation & SQLite WAL Synchronisation)", 78);
 
         SelectObject(memDc, g_hud.fontSans);
         SetTextColor(memDc, th.textMain);
-        RECT bridgeDesc{bridgeRc.left + 24, bridgeRc.top + 68, bridgeRc.right - 24, bridgeRc.top + 104};
-        DrawTextW(memDc, L"Alle 20 C++20-Kompilate sind in die 4 Forschungs-Sphären integriert und interagieren über SQLite3 WAL und Lean 4 MetaM.", -1, &bridgeDesc, DT_LEFT | DT_WORDBREAK);
+        RECT infoBox1Text{infoBox1Rc.left + 14, infoBox1Rc.top + 28, infoBox1Rc.right - 14, infoBox1Rc.bottom - 6};
+        DrawTextW(memDc,
+            L"Die Agentenbrücke entkoppelt das grafische Spatial-HUD von den 20 autonomen C++20-Forschungskompilaten von AXION. "
+            L"Jedes Modul arbeitet speicherisoliert als robuster Subprozess ohne Crash-Risiko für die IDE. "
+            L"Zustände und Beweisnetze synchronisieren sich atomar über SQLite3 Write-Ahead Logging (WAL) und formale Lean 4 Proof-State-Dateien.",
+            -1, &infoBox1Text, DT_LEFT | DT_WORDBREAK);
 
+        // 4 Sphären-Karten mit allen 20 Modulen
+        int cardAreaTop = bridgeRc.top + 138;
+        int cardAreaBottom = bridgeRc.bottom - 165;
+        int qH = std::min(185, std::max(150, (cardAreaBottom - cardAreaTop - 12) / 2));
         int qW = (bridgeRc.right - bridgeRc.left - 64) / 2;
-        int qH = 140;
         int qX[2] = {bridgeRc.left + 24, bridgeRc.left + 36 + qW};
-        int qY[2] = {bridgeRc.top + 112, bridgeRc.top + 264};
+        int qY[2] = {cardAreaTop, cardAreaTop + qH + 10};
+
+        int lineH = (g_hud.currentFontSize == FontSizeOption::Large ? 23 : 21);
 
         for (size_t s = 0; s < 4; ++s) {
             const auto& sp = g_hud.spheres[s];
@@ -1577,27 +1680,59 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
             SelectObject(memDc, g_hud.fontDisplayMid);
             SetTextColor(memDc, sp.accentColor);
-            TextOutW(memDc, qRc.left + 12, qRc.top + 10, sp.title.c_str(), static_cast<int>(sp.title.size()));
+            TextOutW(memDc, qRc.left + 12, qRc.top + 8, sp.title.c_str(), static_cast<int>(sp.title.size()));
 
             SelectObject(memDc, g_hud.fontMonoSmall);
-            int itemY = qRc.top + 34;
+            int itemY = qRc.top + 30;
             for (const auto& exe : sp.executables) {
                 SetTextColor(memDc, th.textMain);
-                TextOutW(memDc, qRc.left + 16, itemY, exe.c_str(), static_cast<int>(exe.size()));
+                TextOutW(memDc, qRc.left + 14, itemY, exe.c_str(), static_cast<int>(exe.size()));
                 SetTextColor(memDc, th.accentSecondary);
-                TextOutW(memDc, qRc.right - 55, itemY, L"READY", 5);
-                itemY += 16;
+                TextOutW(memDc, qRc.right - 62, itemY, L"[READY]", 7);
+                itemY += lineH;
                 if (itemY > qRc.bottom - 16) break;
             }
         }
 
-        RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 54, bridgeRc.right - 24, bridgeRc.bottom - 16};
-        COLORREF stFill = g_hud.selftestBtnHovered ? RGB(18, 54, 42) : RGB(12, 38, 30);
+        // Infobox 2: Was passiert beim 18-Punkte-Selbsttest?
+        int infoBox2Top = cardAreaTop + 2 * qH + 20;
+        RECT infoBox2Rc{bridgeRc.left + 24, infoBox2Top, bridgeRc.right - 24, bridgeRc.bottom - 56};
+        drawChamferedPolygon(memDc, infoBox2Rc, 8, th.bgCard, th.borderMuted, 1);
+
+        SelectObject(memDc, g_hud.fontSansBold);
+        SetTextColor(memDc, th.accentSecondary);
+        TextOutW(memDc, infoBox2Rc.left + 14, infoBox2Rc.top + 8, L"WAS PASSIERT BEIM 18-PUNKTE-SELBSTTEST? (18 Formale Validierungs-Tore)", 70);
+
+        SelectObject(memDc, g_hud.fontSans);
+        SetTextColor(memDc, th.textMain);
+        RECT infoBox2Text{infoBox2Rc.left + 14, infoBox2Rc.top + 28, infoBox2Rc.right - 14, infoBox2Rc.bottom - 6};
+        DrawTextW(memDc,
+            L"Der 18-Punkte-Selbsttest validiert die gesamte mathematische Pipeline von AXION:\r\n"
+            L"• Tore 1–5: SQLite3 WAL-Integrität, Tabellen-Schemata & schreibgeschützter Korpus (2.37M Deklarationen)\r\n"
+            L"• Tore 6–10: K4D Zellulär-Automaten Mikrophysik, Perturbations-Orakel & Hamilton-Dynamik\r\n"
+            L"• Tore 11–14: Lean 4 Beweis-Metamodell, syntaktische Reflection & rigorose 'sorry'-Sperre\r\n"
+            L"• Tore 15–18: Deterministischer Seed (314159), Modulo-Arithmetik Z/65521Z & AVX2-Code-Synthese.",
+            -1, &infoBox2Text, DT_LEFT | DT_WORDBREAK);
+
+        // Status & Action Button
+        RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 50, bridgeRc.right - 24, bridgeRc.bottom - 12};
+        COLORREF stFill = g_hud.selftestBtnHovered ? RGB(22, 64, 50) : RGB(14, 44, 34);
+        if (g_hud.selftestState == 1) stFill = RGB(45, 45, 18);
         drawChamferedPolygon(memDc, stBtnRc, 8, stFill, th.accentSecondary, 2);
 
         SelectObject(memDc, g_hud.fontDisplayMid);
         SetTextColor(memDc, RGB(255, 255, 255));
-        DrawTextW(memDc, L"18-PUNKTE SELFTEST SUITE AUSFÜHREN (axion_engine.exe selftest)", -1, &stBtnRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        std::wstring btnLabel;
+        if (g_hud.selftestState == 1) {
+            btnLabel = L"⏳ SELBSTTEST LÄUFT... (18 Validierungs-Tore werden formal geprüft)";
+        } else if (g_hud.selftestState == 2) {
+            btnLabel = L"✓ 18 / 18 SELFTEST-TORE BESTANDEN (ERFOLG) • ERNEUT TESTEN";
+        } else if (g_hud.selftestState == 3) {
+            btnLabel = L"⚠ TEST FEHLGESCHLAGEN • ERNEUT TESTEN";
+        } else {
+            btnLabel = L"▶ 18-PUNKTE SELFTEST SUITE STARTEN (axion_engine.exe selftest KR_BUILD/selftest)";
+        }
+        DrawTextW(memDc, btnLabel.c_str(), -1, &stBtnRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
     else {
         // Hintergrundpanel für die Toolbar im aktiven Arbeitsbereich
@@ -1609,14 +1744,15 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
     RECT dockRc{24, h - 64, w - 24, h - 18};
     drawChamferedPolygon(memDc, dockRc, 10, th.bgPanel, th.borderMuted, 1);
 
+    int bScale = (g_hud.currentFontSize == FontSizeOption::Large ? 14 : (g_hud.currentFontSize == FontSizeOption::Compact ? -10 : 0));
     struct ModeBtnInfo { WorkspaceMode mode; const wchar_t* label; int width; };
     const ModeBtnInfo modeBtns[6] = {
-        {WorkspaceMode::OrbitalNexus, L"ORBITAL NEXUS", 120},
-        {WorkspaceMode::ResearchLab, L"K4D FORSCHUNG", 120},
-        {WorkspaceMode::SourceDatabase, L"QUELLDATENBANK", 125},
-        {WorkspaceMode::CppEditorLab, L"C++ EDITOR", 100},
-        {WorkspaceMode::MetaFusion, L"META-FUSION", 105},
-        {WorkspaceMode::AgentBridge, L"AGENT BRIDGE", 110}
+        {WorkspaceMode::OrbitalNexus, L"ORBITAL NEXUS", 130 + bScale},
+        {WorkspaceMode::ResearchLab, L"K4D FORSCHUNG", 130 + bScale},
+        {WorkspaceMode::SourceDatabase, L"QUELLDATENBANK", 135 + bScale},
+        {WorkspaceMode::CppEditorLab, L"C++ EDITOR", 110 + bScale},
+        {WorkspaceMode::MetaFusion, L"META-FUSION", 115 + bScale},
+        {WorkspaceMode::AgentBridge, L"AGENT BRIDGE", 120 + bScale}
     };
 
     int btnX = dockRc.left + 12;
@@ -2205,7 +2341,8 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_hud.hoveredWorkspaceBtn = -1;
         if (my >= dockRc.top + 8 && my <= dockRc.bottom - 8) {
             int btnX = dockRc.left + 12;
-            const int widths[6] = {120, 120, 125, 100, 105, 110};
+            int bScale = (g_hud.currentFontSize == FontSizeOption::Large ? 14 : (g_hud.currentFontSize == FontSizeOption::Compact ? -10 : 0));
+            const int widths[6] = {130 + bScale, 130 + bScale, 135 + bScale, 110 + bScale, 115 + bScale, 120 + bScale};
             for (int i = 0; i < 6; ++i) {
                 if (mx >= btnX && mx <= btnX + widths[i]) {
                     g_hud.hoveredWorkspaceBtn = i;
@@ -2217,6 +2354,19 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         if (prevTop != g_hud.hoveredTopButton || prevWs != g_hud.hoveredWorkspaceBtn) {
             InvalidateRect(hwnd, nullptr, FALSE);
+        }
+
+        // Agent Bridge: Selftest Button Hover
+        if (g_hud.currentMode == WorkspaceMode::AgentBridge) {
+            int bridgeW = std::min(1240, w - 64);
+            RECT bridgeRc{w / 2 - bridgeW / 2, 70, w / 2 + bridgeW / 2, h - 74};
+            RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 50, bridgeRc.right - 24, bridgeRc.bottom - 12};
+            bool prevStHov = g_hud.selftestBtnHovered;
+            g_hud.selftestBtnHovered = (mx >= stBtnRc.left && mx <= stBtnRc.right &&
+                                        my >= stBtnRc.top && my <= stBtnRc.bottom);
+            if (prevStHov != g_hud.selftestBtnHovered) {
+                InvalidateRect(hwnd, nullptr, FALSE);
+            }
         }
 
         // Nexus: Sphären & Buttons Hover
@@ -2276,13 +2426,16 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             if (g_hud.hoveredThemeCard >= 0) {
                 g_hud.currentThemeIndex = g_hud.hoveredThemeCard;
                 applyThemeToControls();
-                InvalidateRect(hwnd, nullptr, FALSE);
+                InvalidateRect(hwnd, nullptr, TRUE);
                 return 0;
             }
             if (g_hud.hoveredFontSizeBtn >= 0) {
                 g_hud.currentFontSize = static_cast<FontSizeOption>(g_hud.hoveredFontSizeBtn);
                 rebuildFonts();
-                InvalidateRect(hwnd, nullptr, FALSE);
+                RECT rCl{};
+                GetClientRect(hwnd, &rCl);
+                updateControlLayout(rCl.right, rCl.bottom);
+                InvalidateRect(hwnd, nullptr, TRUE);
                 return 0;
             }
             // Options Toggle
@@ -2400,6 +2553,16 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 return 0;
             }
         }
+
+        // Klicks in der Agent Bridge
+        if (g_hud.currentMode == WorkspaceMode::AgentBridge) {
+            if (g_hud.selftestBtnHovered) {
+                launchProcess(L"selftest \"KR_BUILD/selftest\"");
+                g_hud.liveFooterStatus = L"18-Punkte-Selftest gestartet • Orakel prüft 18 mathematische Tore...";
+                InvalidateRect(hwnd, nullptr, TRUE);
+                return 0;
+            }
+        }
         return 0;
     }
 
@@ -2427,11 +2590,23 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 CloseHandle(g_hud.activeProcess.hThread);
                 g_hud.activeProcess = {};
                 g_hud.processRunning = false;
-                g_hud.liveFooterStatus = L"Zyklus beendet (ExitCode " + std::to_wstring(code) + L") • SQLite WAL aktualisiert";
+
+                if (g_hud.lastProcessCmd.find(L"selftest") != std::wstring::npos) {
+                    if (code == 0) {
+                        g_hud.selftestState = 2; // Success
+                        g_hud.liveFooterStatus = L"✓ 18-Punkte-Selftest ERFOLGREICH (18/18 PASSED) • ExitCode 0";
+                    } else {
+                        g_hud.selftestState = 3; // Error
+                        g_hud.liveFooterStatus = L"⚠ Selftest mit Fehler beendet (ExitCode " + std::to_wstring(code) + L")";
+                    }
+                } else {
+                    g_hud.liveFooterStatus = L"Zyklus beendet (ExitCode " + std::to_wstring(code) + L") • SQLite WAL aktualisiert";
+                }
+
                 if (g_hud.currentMode == WorkspaceMode::ResearchLab) refreshK4dLab();
                 else if (g_hud.currentMode == WorkspaceMode::CppEditorLab) refreshCppEditorLab();
                 else if (g_hud.currentMode == WorkspaceMode::MetaFusion) refreshMetaFusion();
-                InvalidateRect(hwnd, nullptr, FALSE);
+                InvalidateRect(hwnd, nullptr, TRUE);
             }
         }
         return 0;
