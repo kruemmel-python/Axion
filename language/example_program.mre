@@ -1,0 +1,7 @@
+language MRE_APP_1
+name differenz
+input input u16
+state state u16
+op difference absdiff input previous
+goal delta
+output difference u16

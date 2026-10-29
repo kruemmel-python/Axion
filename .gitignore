@@ -1,0 +1,33 @@
+# Build directories & outputs
+KR_BUILD/
+build/
+build-*/
+*.obj
+*.exe
+*.dll
+*.a
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# Database & Runtime files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.log
+*.lock
+
+# Temporary & Cache
+.cache/
+tmp/
+temp/
+selftest/
+selftest-win/
+software-selftest/
+
+# IDE & Editor caches
+.vs/
+.vscode/
+*.user
+*.suo
