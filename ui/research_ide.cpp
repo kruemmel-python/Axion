@@ -1,6 +1,6 @@
 // ============================================================================
 // AXION // MATH RESEARCH IDE v4.0.3 — BORDERLESS SPATIAL ORBITAL HUD
-// Entwickler: Ralf Krümmel (MDraft KR Enterprise)
+// Entwickler: Ralf Krümmel
 //
 // Flimmerfreie, hochperformante Synthese:
 // - WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS (100% flimmerfrei)
@@ -1347,7 +1347,7 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
     SelectObject(memDc, g_hud.fontSans);
     SetTextColor(memDc, th.textMuted);
-    TextOutW(memDc, 48, 42, L"MDraft KR Enterprise • Autonome Mathematische Forschung & Code-Synthese • Ralf Krümmel", 86);
+    TextOutW(memDc, 48, 42, L"Axion Research IDE • Autonome Mathematische Forschung & Code-Synthese • Ralf Krümmel", 85);
 
     // Mitte: Status-Pill (skaliert, keine abgeschnittenen Texte)
     if (w >= 1200) {
@@ -1960,7 +1960,7 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         TextOutW(memDc, mBox.left + 24, mBox.top + 76, L"Entwickler & Konzeption:", 24);
         SelectObject(memDc, g_hud.fontSans);
         SetTextColor(memDc, RGB(255, 255, 255));
-        TextOutW(memDc, mBox.left + 200, mBox.top + 76, L"Ralf Krümmel (MDraft KR Enterprise)", 35);
+        TextOutW(memDc, mBox.left + 200, mBox.top + 76, L"Ralf Krümmel", 12);
 
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.accentPrimary);

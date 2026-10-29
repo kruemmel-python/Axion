@@ -1,7 +1,7 @@
 # Axion – Mathematischer Wissenskorpus: Daten-Provenienz, OpenAI-Forschungsunterlagen & Ingestion-Pipeline
 
 **Projekt:** AXION // Autonomous Mathematical Research IDE & Engine  
-**Entwickler & Konzeption:** Ralf Krümmel (MDraft KR Enterprise)  
+**Entwickler & Konzeption:** Ralf Krümmel  
 **Datenbank-Artefakt:** `research.sqlite` (1,49 GB, SQLite3 mit B-Tree-Indizierung)  
 **Umfang:** 2.369.933 mathematische Deklarationen | 149.204 Modul-Abhängigkeiten | 48.266 Quell-Dateien  
 
@@ -13,7 +13,7 @@ Die Wissensbasis von Axion (`research.sqlite`) ist kein künstlich generierter o
 
 OpenAI veröffentlichte diese umfangreichen Forschungsdatensätze, um das maschinelle Beweisen, automatische Theorem-Proving und die formale Verifikation auf ein neues Fundament zu stellen. 
 
-**MDraft KR Enterprise (Ralf Krümmel)** hat diese Original-Forschungsdaten akquiriert, bereinigt, modular normalisiert und in eine eigens für Axion konzipierte, hochperformante relationale **SQLite3-B-Tree-Struktur** überführt. Dadurch ist Axion in der Lage, mehr als 2,36 Millionen bewiesene Sätze, Definitionen und Lemmata in Sub-Millisekunden zu durchsuchen, semantisch zu verknüpfen und als unumstößliche mathematische Axiomatik für autonome Beweiszyklen zu nutzen.
+Entwickler **Ralf Krümmel** hat diese Original-Forschungsdaten akquiriert, bereinigt, modular normalisiert und über die **Axion-Ingestion-Pipeline** in eine eigens für Axion konzipierte, hochperformante relationale **SQLite3-B-Tree-Struktur** überführt. Dadurch ist Axion in der Lage, mehr als 2,36 Millionen bewiesene Sätze, Definitionen und Lemmata in Sub-Millisekunden zu durchsuchen, semantisch zu verknüpfen und als unumstößliche mathematische Axiomatik für autonome Beweiszyklen zu nutzen.
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
         A3["Lean 4 Formal Library (Mathlib v4)"]
     end
 
-    subgraph Pipeline ["2. Axion Ingestion- & Normalisierungs-Pipeline (MDraft KR Enterprise)"]
+    subgraph Pipeline ["2. Axion Ingestion- & Normalisierungs-Pipeline (Ralf Krümmel)"]
         B1["Lean 4 AST-Parser & Reflection Engine"]
         B2["Pfad-Normalisierung (Windows / UNIX / Namespace OAI)"]
         B3["Deduplizierung & Zertifikats-Filterung"]
@@ -179,4 +179,4 @@ Axion nutzt den 2,37M-Korpus in allen vier Forschungs-Sphären:
 
 * **OpenAI:** Ein besonderer Dank gilt **OpenAI** für die Veröffentlichung der formalen mathematischen Forschungsdatensätze und Benchmarks, die der weltweiten Open-Source- und KI-Forschungsgemeinschaft als wertvolle Grundlage für automatisiertes Theorembeweisen dienen.
 * **Lean Community:** Dank an Leonardo de Moura, das Lean FRO Team und die internationale Mathlib-Community für die Entwicklung von Lean 4.
-* **Axion Platform:** Konzeption, Ingestion-Architektur, C++20-Engine und GUI wurden entwickelt von **Ralf Krümmel (MDraft KR Enterprise)**.
+* **Axion Platform:** Konzeption, Ingestion-Architektur, C++20-Engine und GUI wurden entwickelt von **Ralf Krümmel**.

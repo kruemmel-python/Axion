@@ -1,6 +1,6 @@
 // ============================================================================
 // AXION // MATH RESEARCH IDE v4.0.3 — C++20 BORDERLESS SPATIAL ORBITAL HUD
-// Entwickler: Ralf Krümmel (MDraft KR Enterprise)
+// Entwickler: Ralf Krümmel
 //
 // ZWECK DIESER VORLAGE FÜR KI-AGENTEN:
 // Ersetzt das klassische Windows-Tab/ListView-Fenster in `ui/research_ide.cpp`

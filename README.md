@@ -23,7 +23,7 @@
 
 Im Gegensatz zu rein statistischen Sprachmodellen stützt sich Axion auf eine **strenge mathematische Orakel-Architektur**: Jede generierte Hypothese wird vor ihrer Annahme zweistufig auditiert – zunächst durch hochdynamische **numerische Falsifikations-Routinen** gegen Gegenbeispiele (in $\mathbb{Z}/65521\mathbb{Z}$ und $\mathbb{R}$) und anschließend durch den interaktiven Theorembeweiser **Lean 4**. Formal verifizierte Theoreme werden danach vollautomatisch in optimierte C++20-Rechenkerne und native Windows-Anwendungen überführt.
 
-* **Entwickler & Konzeption:** Ralf Krümmel (MDraft KR Enterprise)  
+* **Entwickler & Konzeption:** Ralf Krümmel  
 * **Technologie:** C++20, Win32 Native GDI/DWM API, Lean 4 Interactive Theorem Prover, SQLite3 v3.53.4 (WAL), LLVM-MinGW & MSVC Toolchains.
 
 ---
@@ -148,7 +148,7 @@ Axion greift auf einen umfangreichen mathematischen Wissenskorpus (`research.sql
 ### 🏛️ Herkunft & Provenienz: OpenAI-Forschungsunterlagen & Mathlib
 Der mathematische Korpus von Axion basiert auf den **offiziellen, von OpenAI veröffentlichten formalen mathematischen Forschungsunterlagen und Formalisierungs-Korpora** (u. a. *OpenAI Formal Math Dataset*, *miniF2F*, *OAI Mathematical Reasoning Benchmarks* im Namespace `OAI`), kombiniert mit der standardisierten mathematischen Bibliothek **Mathlib** für den interaktiven Theorembeweiser **Lean 4**.
 
-**MDraft KR Enterprise (Ralf Krümmel)** hat diese Original-Forschungsdaten akquiriert, normalisiert (u. a. plattformübergreifende Pfade, Bereinigung redundanter Imports, Ausschluss von Zwischenzertifikaten) und in eine hochperformante, schreibgeschützte SQLite3-B-Tree-Datenbank überführt (`PRAGMA query_only = ON;`).
+Entwickler **Ralf Krümmel** hat diese Original-Forschungsdaten akquiriert, normalisiert (u. a. plattformübergreifende Pfade, Bereinigung redundanter Imports, Ausschluss von Zwischenzertifikaten) und über die Axion-Ingestion-Pipeline in eine hochperformante, schreibgeschützte SQLite3-B-Tree-Datenbank überführt (`PRAGMA query_only = ON;`).
 
 > 📖 **Ausführliche Dokumentation zur Entstehung, dem Tabellenschema und der Ingestion-Pipeline finden Sie in [docs/DATASET_PROVENANCE.md](docs/DATASET_PROVENANCE.md).**
 
@@ -289,6 +289,6 @@ H:\Axion\
 
 ## 👤 Entwickler & Kontakt
 
-* **Konzeption & Entwicklung:** Ralf Krümmel (MDraft KR Enterprise)  
+* **Konzeption & Entwicklung:** Ralf Krümmel  
 * **Repository:** [https://github.com/kruemmel-python/Axion](https://github.com/kruemmel-python/Axion)  
 * **Lizenz:** [MIT License](LICENSE)

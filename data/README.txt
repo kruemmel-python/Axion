@@ -9,7 +9,7 @@ Legen Sie die heruntergeladene und entpackte Datei 'research.sqlite' in diesen O
 Herkunft & Inhalt von 'research.sqlite':
 - Basiert auf den von OpenAI veröffentlichten formalen mathematischen Forschungsunterlagen
   (OpenAI Formal Math Dataset / miniF2F im Namespace OAI.*) kombiniert mit Mathlib für Lean 4.
-- Aufbereitet, normalisiert und indiziert durch Ralf Krümmel (MDraft KR Enterprise).
+- Aufbereitet, normalisiert und indiziert durch Ralf Krümmel über die Axion-Ingestion-Pipeline.
 - Beinhaltet 2.369.933 mathematische Deklarationen (966k def, 960k theorem, 420k lemma),
   149.204 relationale Modul-Abhängigkeiten und 48.266 Quell-Dateien.
 - Streng schreibgeschützt (PRAGMA query_only = ON) als unantastbare Wahrheitsbasis.
