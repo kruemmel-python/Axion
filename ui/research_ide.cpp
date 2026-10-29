@@ -1645,7 +1645,8 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         TextOutW(memDc, bridgeRc.left + 24, bridgeRc.top + 34, L"C++20 Subprozess-Orchester & Formale Integrität", 47);
 
         // Infobox 1: Was ist die Agentenbrücke?
-        RECT infoBox1Rc{bridgeRc.left + 24, bridgeRc.top + 62, bridgeRc.right - 24, bridgeRc.top + 130};
+        int box1H = (g_hud.currentFontSize == FontSizeOption::Large ? 116 : 98);
+        RECT infoBox1Rc{bridgeRc.left + 24, bridgeRc.top + 58, bridgeRc.right - 24, bridgeRc.top + 58 + box1H};
         drawChamferedPolygon(memDc, infoBox1Rc, 8, th.bgCard, th.borderMuted, 1);
 
         SelectObject(memDc, g_hud.fontSansBold);
@@ -1662,14 +1663,20 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             -1, &infoBox1Text, DT_LEFT | DT_WORDBREAK);
 
         // 4 Sphären-Karten mit allen 20 Modulen
-        int cardAreaTop = bridgeRc.top + 138;
-        int cardAreaBottom = bridgeRc.bottom - 165;
-        int qH = std::min(185, std::max(150, (cardAreaBottom - cardAreaTop - 12) / 2));
+        int cardAreaTop = infoBox1Rc.bottom + 10;
+        int stBtnH = 40;
+        int stBtnTop = bridgeRc.bottom - 52;
+        int box2H = (g_hud.currentFontSize == FontSizeOption::Large ? 152 : 136);
+        int infoBox2Top = stBtnTop - 12 - box2H;
+
+        // Verfügbare Höhe für die 4 Sphären-Karten:
+        int cardAvailH = infoBox2Top - 12 - cardAreaTop;
+        int qH = std::min(175, std::max(135, (cardAvailH - 10) / 2));
         int qW = (bridgeRc.right - bridgeRc.left - 64) / 2;
         int qX[2] = {bridgeRc.left + 24, bridgeRc.left + 36 + qW};
         int qY[2] = {cardAreaTop, cardAreaTop + qH + 10};
 
-        int lineH = (g_hud.currentFontSize == FontSizeOption::Large ? 23 : 21);
+        int lineH = (g_hud.currentFontSize == FontSizeOption::Large ? 22 : 20);
 
         for (size_t s = 0; s < 4; ++s) {
             const auto& sp = g_hud.spheres[s];
@@ -1695,8 +1702,7 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         }
 
         // Infobox 2: Was passiert beim 18-Punkte-Selbsttest?
-        int infoBox2Top = cardAreaTop + 2 * qH + 20;
-        RECT infoBox2Rc{bridgeRc.left + 24, infoBox2Top, bridgeRc.right - 24, bridgeRc.bottom - 56};
+        RECT infoBox2Rc{bridgeRc.left + 24, infoBox2Top, bridgeRc.right - 24, infoBox2Top + box2H};
         drawChamferedPolygon(memDc, infoBox2Rc, 8, th.bgCard, th.borderMuted, 1);
 
         SelectObject(memDc, g_hud.fontSansBold);
@@ -1715,7 +1721,7 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             -1, &infoBox2Text, DT_LEFT | DT_WORDBREAK);
 
         // Status & Action Button
-        RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 50, bridgeRc.right - 24, bridgeRc.bottom - 12};
+        RECT stBtnRc{bridgeRc.left + 24, stBtnTop, bridgeRc.right - 24, stBtnTop + stBtnH};
         COLORREF stFill = g_hud.selftestBtnHovered ? RGB(22, 64, 50) : RGB(14, 44, 34);
         if (g_hud.selftestState == 1) stFill = RGB(45, 45, 18);
         drawChamferedPolygon(memDc, stBtnRc, 8, stFill, th.accentSecondary, 2);
@@ -2360,7 +2366,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (g_hud.currentMode == WorkspaceMode::AgentBridge) {
             int bridgeW = std::min(1240, w - 64);
             RECT bridgeRc{w / 2 - bridgeW / 2, 70, w / 2 + bridgeW / 2, h - 74};
-            RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 50, bridgeRc.right - 24, bridgeRc.bottom - 12};
+            RECT stBtnRc{bridgeRc.left + 24, bridgeRc.bottom - 52, bridgeRc.right - 24, bridgeRc.bottom - 12};
             bool prevStHov = g_hud.selftestBtnHovered;
             g_hud.selftestBtnHovered = (mx >= stBtnRc.left && mx <= stBtnRc.right &&
                                         my >= stBtnRc.top && my <= stBtnRc.bottom);
