@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AXION // MATH RESEARCH IDE v4.0.3 — Spatial Orbital HUD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-obsidian: #060911;
+      --bg-panel: rgba(11, 17, 30, 0.78);
+      --cyan-glow: #00F0FF;
+      --emerald-glow: #00E5A3;
+      --amber-glow: #FFB800;
+      --violet-glow: #A855F7;
+      --text-main: #E2E8F0;
+      --text-muted: #64748B;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-obsidian);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .font-display {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Abgeschrägte futuristische Tech-Kanten (Chamfered Corners) - Kein typisches Windows-Fenster */
+    .chamfer-frame {
+      clip-path: polygon(
+        18px 0%, calc(100% - 18px) 0%, 100% 18px,
+        100% calc(100% - 18px), calc(100% - 18px) 100%,
+        18px 100%, 0% calc(100% - 18px), 0% 18px
+      );
+    }
+
+    .chamfer-card {
+      clip-path: polygon(
+        12px 0%, 100% 0%, 100% calc(100% - 12px),
+        calc(100% - 12px) 100%, 0% 100%, 0% 12px
+      );
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.82) 0%, rgba(7, 11, 20, 0.92) 100%);
+      border: 1px solid rgba(0, 240, 255, 0.16);
+      backdrop-filter: blur(16px);
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chamfer-card:hover {
+      border-color: rgba(0, 240, 255, 0.45);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.08);
+    }
+
+    .chamfer-btn {
+      clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
+      transition: all 0.22s ease;
+    }
+
+    .chamfer-pill {
+      clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+    }
+
+    /* Subtiles Hintergrund-Koordinatengitter */
+    .spatial-grid {
+      background-size: 48px 48px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    }
+
+    /* Sanfte Biolumineszenz-Schatten */
+    .glow-cyan {
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.22), inset 0 0 12px rgba(0, 240, 255, 0.08);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 24px rgba(0, 229, 163, 0.22), inset 0 0 12px rgba(0, 229, 163, 0.08);
+    }
+    .glow-amber {
+      box-shadow: 0 0 24px rgba(255, 184, 0, 0.22), inset 0 0 12px rgba(255, 184, 0, 0.08);
+    }
+
+    /* Versteckte Scrollbars für ruhige Optik */
+    .no-scrollbar::-webkit-scrollbar {
+      width: 3px;
+      height: 3px;
+    }
+    .no-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.2);
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 0.65; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+
+    .animate-pulse-slow {
+      animation: pulse-slow 4s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-4 flex items-center justify-center bg-[#030509]">
+
+  <!-- ÄUSSERER RAHMENLOSER SPATIAL HUD CONTAINER (Kein Windows-Rahmen!) -->
+  <div id="hud-shell" class="relative w-full h-full max-w-[1720px] max-h-[1020px] bg-[#060911] spatial-grid chamfer-frame border border-cyan-500/25 shadow-[0_0_90px_rgba(0,240,255,0.09)] flex flex-col justify-between overflow-hidden transition-all duration-500">
+
+    <!-- HINTERGRUND-CANVAS FÜR DEN INTERAKTIVEN AXION ORBITAL CORE & 4D K4D-PROJEKTION -->
+    <canvas id="orbitalCanvas" class="absolute inset-0 w-full h-full pointer-events-auto z-0"></canvas>
+
+    <!-- DEZENTE ECK-VEKTOR-MARKIERUNGEN -->
+    <svg class="absolute top-3 left-3 w-8 h-8 text-cyan-400/40 pointer-events-none z-10" viewBox="0 0 32 32" fill="none">
+      <path d="M1 22V10L10 1H22" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="absolute top-3 right-3 w-8 h-8 text-cyan-400/40 pointer-events-none z-10" viewBox="0 0 32 32" fill="none">
+      <path d="M31 22V10L22 1H10" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="absolute bottom-3 left-3 w-8 h-8 text-cyan-400/40 pointer-events-none z-10" viewBox="0 0 32 32" fill="none">
+      <path d="M1 10V22L10 31H22" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <svg class="absolute bottom-3 right-3 w-8 h-8 text-cyan-400/40 pointer-events-none z-10" viewBox="0 0 32 32" fill="none">
+      <path d="M31 10V22L22 31H10" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+
+    <!-- ==================== TOP HUD BAR (Rahmenlose Telemetrie & Fenster-Steuerung) ==================== -->
+    <header class="relative z-20 flex items-center justify-between px-7 pt-5 pb-3 border-b border-cyan-500/10 bg-gradient-to-b from-[#060911]/95 via-[#060911]/60 to-transparent">
+      
+      <!-- Links: System-Puls & SQLite Status -->
+      <div class="flex items-center gap-4">
+        <div class="relative flex items-center justify-center w-9 h-9 chamfer-pill bg-cyan-500/10 border border-cyan-400/40">
+          <span id="corePulseDot" class="w-2.5 h-2.5 rounded-full bg-[#00F0FF] shadow-[0_0_12px_#00F0FF] animate-ping absolute"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-[#00F0FF] relative"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="font-display text-sm sm:text-base tracking-[0.2em] font-bold text-white">AXION</span>
+            <span class="text-[10px] font-mono-tech uppercase px-2 py-0.5 bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">v4.0.3 RELEASE</span>
+            <span class="hidden md:inline-block text-[11px] font-mono-tech text-emerald-400/90">// SQLITE3 v3.53.4 WAL ONLINE</span>
+          </div>
+          <p class="text-[11px] text-slate-400 tracking-wide mt-0.5">
+            MDraft KR Enterprise • Autonome Mathematische Forschung &amp; Code-Synthese • Ralf Krümmel
+          </p>
+        </div>
+      </div>
+
+      <!-- Mitte: Ruhige Phasen-Anzeige (Kein Menüband!) -->
+      <div class="hidden xl:flex items-center gap-6 px-5 py-1.5 chamfer-pill bg-slate-900/70 border border-slate-700/50">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          <span class="text-slate-400">Orakel:</span>
+          <span id="hudOracleStatus" class="font-mono-tech text-cyan-300">Lean 4 + Numerik bereit</span>
+        </div>
+        <div class="h-3 w-[1px] bg-slate-700"></div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-slate-400">Aktive Artefakte:</span>
+          <span class="font-mono-tech text-emerald-300">20 / 20 .exe bereit</span>
+        </div>
+        <div class="h-3 w-[1px] bg-slate-700"></div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span class="text-slate-400">Quell-DB:</span>
+          <span class="font-mono-tech text-amber-300">READ-ONLY GESCHÜTZT</span>
+        </div>
+      </div>
+
+      <!-- Rechts: Eigene rahmenlose Vektor-Fenstersteuerung -->
+      <div class="flex items-center gap-2">
+        <button onclick="openInfoModal()" title="Mathematische Herkunft & Entwickler-Info" class="px-3 py-1.5 chamfer-pill bg-slate-900/80 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-400/50 text-xs font-mono-tech text-slate-300 hover:text-cyan-200 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>INFO</span>
+        </button>
+
+        <!-- HUD Minimieren (Zen-Ansicht) -->
+        <button onclick="toggleZenMode()" title="Zen-Orbital-Modus (Panels ausblenden)" class="w-8 h-8 chamfer-pill bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-400/50 flex items-center justify-center text-slate-400 hover:text-cyan-300 transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <!-- Fokus-Modus (Vollbild-Simulation) -->
+        <button onclick="toggleFullscreenSimulation()" title="Fokus-Modus umschalten" class="w-8 h-8 chamfer-pill bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-400/50 flex items-center justify-center text-slate-400 hover:text-emerald-300 transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M2.5 6V2.5H6M10 2.5H13.5V6M13.5 10V13.5H10M6 13.5H2.5V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <!-- Schließen-Simulation -->
+        <button onclick="triggerPowerDown()" title="HUD sicher beenden" class="w-8 h-8 chamfer-pill bg-slate-900/80 hover:bg-rose-950/80 border border-slate-700/80 hover:border-rose-500/60 flex items-center justify-center text-slate-400 hover:text-rose-400 transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==================== HAUPTBEREICH: PROGRESSIVE DISCLOSURE WORKSPACE ==================== -->
+    <main class="relative z-10 flex-1 flex items-center justify-between px-6 sm:px-10 py-4 overflow-hidden pointer-events-none">
+
+      <!-- LINKS: KOMPAKTE CLUSTER-ÜBERSICHT (4 Sphären-Wähler für direkten Zugriff) -->
+      <aside id="leftClusterNav" class="w-72 sm:w-80 flex flex-col gap-3 pointer-events-auto transition-all duration-500">
+        <div class="px-1 mb-1">
+          <span class="text-[10px] font-mono-tech uppercase tracking-[0.25em] text-cyan-400/80">PROGRESSIVE DISCLOSURE</span>
+          <h2 class="text-sm font-semibold text-slate-200 mt-0.5">4 Forschungs-Sphären statt 20 Einzel-Tools</h2>
+        </div>
+
+        <!-- Sphäre 1: AUTONOME FORSCHUNG -->
+        <button onclick="selectSphere('research')" id="nav-research" class="chamfer-card p-3.5 text-left group relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tech tracking-widest uppercase text-cyan-400">SPHÄRE 01 // K4D &amp; ZIELE</span>
+            <span class="text-[10px] font-mono-tech px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">5 Kerne</span>
+          </div>
+          <div class="font-display text-sm font-bold text-white mt-1 group-hover:text-cyan-300 transition">AUTONOME FORSCHUNG</div>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            K4D-Beweisnetze, 4D-Zellautomaten, offene Ziel- &amp; Meta-Goal-Evolution.
+          </p>
+        </button>
+
+        <!-- Sphäre 2: SEMANTIK & ENTDECKUNG -->
+        <button onclick="selectSphere('semantic')" id="nav-semantic" class="chamfer-card p-3.5 text-left group relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tech tracking-widest uppercase text-emerald-400">SPHÄRE 02 // GRAPHEN</span>
+            <span class="text-[10px] font-mono-tech px-1.5 py-0.5 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">3 Kerne</span>
+          </div>
+          <div class="font-display text-sm font-bold text-white mt-1 group-hover:text-emerald-300 transition">SEMANTIK &amp; ENTDECKUNG</div>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            Multi-Relationen-Pfade, Typ-Kompositionsgraphen &amp; Read-Only Quellkatalog.
+          </p>
+        </button>
+
+        <!-- Sphäre 3: SYNTHESE & DESIGN -->
+        <button onclick="selectSphere('synthesis')" id="nav-synthesis" class="chamfer-card p-3.5 text-left group relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tech tracking-widest uppercase text-amber-400">SPHÄRE 03 // C++20 KERNEL</span>
+            <span class="text-[10px] font-mono-tech px-1.5 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/30">5 Kerne</span>
+          </div>
+          <div class="font-display text-sm font-bold text-white mt-1 group-hover:text-amber-300 transition">SYNTHESE &amp; DESIGN</div>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            MRE_APP_1 Operator-Sprache, Software-Labor, Nutzen-Evaluator &amp; GUI-Synthese.
+          </p>
+        </button>
+
+        <!-- Sphäre 4: GEDÄCHTNIS & AUDIT -->
+        <button onclick="selectSphere('memory')" id="nav-memory" class="chamfer-card p-3.5 text-left group relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tech tracking-widest uppercase text-purple-400">SPHÄRE 04 // PROVENIENZ</span>
+            <span class="text-[10px] font-mono-tech px-1.5 py-0.5 bg-purple-500/10 text-purple-300 border border-purple-500/30">3 Kerne + DB</span>
+          </div>
+          <div class="font-display text-sm font-bold text-white mt-1 group-hover:text-purple-300 transition">GEDÄCHTNIS &amp; AUDIT</div>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            SQLite-Lineage-Gedächtnis, Gegenbeispiel-Orakel &amp; Evidenz-Prüfung.
+          </p>
+        </button>
+
+        <!-- Ruhige Status-Kapsel unten links -->
+        <div class="chamfer-card p-3 mt-1 border-slate-800/80 bg-slate-950/60">
+          <div class="flex items-center justify-between text-[11px] font-mono-tech text-slate-400">
+            <span>AKTIVER SEED</span>
+            <span id="activeSeedBadge" class="text-cyan-300 font-semibold">314159</span>
+          </div>
+          <div class="w-full bg-slate-800/70 h-1 mt-2 overflow-hidden">
+            <div id="CalmProgressBar" class="bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 h-full w-2/3 transition-all duration-500"></div>
+          </div>
+          <p id="calmStatusSubtext" class="text-[11px] text-slate-400 mt-2">
+            Klicken Sie im Orbit oder links auf eine Sphäre, um Details sanft einzublenden.
+          </p>
+        </div>
+      </aside>
+
+      <!-- MITTE: FREIER BLICK AUF DEN INTERAKTIVEN ORBITAL CORE (oder C++ Agent Bridge Overlay) -->
+      <section id="centerOverlayContainer" class="flex-1 h-full flex items-center justify-center px-4 pointer-events-none">
+        
+        <!-- C++ AGENT BRIDGE OVERLAY (Wird nur im Modus "C++ AGENT BRIDGE" eingeblendet) -->
+        <div id="agentBridgeModal" class="hidden pointer-events-auto w-full max-w-3xl max-h-[82vh] chamfer-card p-6 border-cyan-400/40 glow-cyan flex flex-col justify-between overflow-hidden">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-[10px] font-mono-tech uppercase tracking-widest text-cyan-400">ARCHITEKTUR-BRÜCKE // H:/Axion/KR_BUILD/Release</span>
+              <h3 class="font-display text-base font-bold text-white mt-0.5">KI-Agent C++20 Subprozess- &amp; Artefakt-Matrix</h3>
+            </div>
+            <button onclick="setViewMode('nexus')" class="px-3 py-1 chamfer-pill bg-slate-800 hover:bg-slate-700 text-xs font-mono-tech text-slate-300">
+              Zurück zum Orbit
+            </button>
+          </div>
+
+          <p class="text-xs text-slate-300 my-3 leading-relaxed">
+            Damit der Anwender niemals von 20 einzelnen `.exe`-Werkzeugen überwältigt wird, bündelt das neue rahmenlose C++20-HUD (`ui/axion_spatial_hud_template.cpp`) alle 20 Build-Artefakte aus <code class="text-cyan-300 font-mono-tech">KR_BUILD/Release/</code> in 4 ruhige Sphären und startet sie asynchron per <code class="text-emerald-300 font-mono-tech">CreateProcessW</code>:
+          </p>
+
+          <div id="artifactMatrixGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto no-scrollbar pr-1 max-h-[48vh]">
+            <!-- Wird dynamisch per JS befüllt -->
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-mono-tech text-slate-400">C++20 Vorlage bereit in: <strong class="text-cyan-300">ui/axion_spatial_hud_template.cpp</strong></span>
+            <button onclick="simulateAllSelftests()" class="px-4 py-2 chamfer-btn bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-emerald-200 font-mono-tech text-xs font-semibold">
+              18-PUNKTE SELFTEST SUITE SIMULIEREN
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RECHTS: DAS RUHIGE FOKUS-PANEL (Maximal 3 essenzielle Karten + 1 klarer Primär-Button) -->
+      <aside id="rightFocusPanel" class="w-80 sm:w-96 chamfer-card p-5 pointer-events-auto flex flex-col justify-between transition-all duration-500 glow-cyan">
+        
+        <div>
+          <!-- Panel Header -->
+          <div class="flex items-center justify-between border-b border-slate-800/90 pb-3">
+            <div>
+              <span id="focusClusterTag" class="text-[10px] font-mono-tech uppercase tracking-[0.2em] text-cyan-400">SPHÄRE 01 // FOKUS-LABOR</span>
+              <h2 id="focusTitle" class="font-display text-lg font-bold text-white mt-0.5">AUTONOME FORSCHUNG</h2>
+            </div>
+            <span id="focusStateBadge" class="px-2.5 py-1 chamfer-pill text-[10px] font-mono-tech bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
+              BEREIT
+            </span>
+          </div>
+
+          <!-- Ruhige Erklärung -->
+          <p id="focusDescription" class="text-xs text-slate-300 mt-3 leading-relaxed">
+            Steuert das verzweigte K4D-Beweisnetz und die autonome Ziel-Evolution ohne komplexe Parameter-Wüsten.
+          </p>
+
+          <!-- MAXIMAL 3 ESSENZIELLE KARTEN (Progressive Disclosure) -->
+          <div id="focusCardsContainer" class="mt-4 flex flex-col gap-3">
+            <!-- Werden dynamisch und ruhig für die gewählte Sphäre gerendert -->
+          </div>
+        </div>
+
+        <!-- LIVE-VISUALISIERUNG DER RELATION / SQLITE-SPUR -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80">
+          <div class="flex items-center justify-between text-[11px] font-mono-tech text-slate-400 mb-1.5">
+            <span id="liveVisTitle">LIVE K4D-PHASENRAUM &amp; LEAN-ORAKEL</span>
+            <span id="liveMetricValue" class="text-emerald-400">Δ = 0.0000e+00</span>
+          </div>
+          
+          <!-- Mini-Telemetrie-Wellenform Canvas -->
+          <div class="h-16 w-full bg-[#04070e] border border-slate-800/90 chamfer-pill overflow-hidden relative">
+            <canvas id="miniWaveCanvas" class="w-full h-full"></canvas>
+          </div>
+
+          <!-- Aktive Subprozess-Zuordnung -->
+          <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono-tech text-slate-400 bg-slate-950/80 px-3 py-1.5 border border-slate-800/80">
+            <span>Aktiver Kernel:</span>
+            <span id="activeBinaryName" class="text-cyan-300">axion_engine.exe (cycle-k4d-six)</span>
+          </div>
+
+          <!-- GROSSER, KLARER HAUPT-AKTIONSBUTTON -->
+          <button id="primaryActionButton" onclick="triggerPrimarySphereAction()" class="mt-3 w-full py-3 px-4 chamfer-btn bg-gradient-to-r from-cyan-500/25 via-cyan-400/20 to-emerald-500/25 hover:from-cyan-500/40 hover:to-emerald-500/40 border border-cyan-400/60 text-white font-display text-xs tracking-[0.15em] font-bold flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(0,240,255,0.2)]">
+            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="primaryActionText">ZYKLUS STARTEN // MODUL AUSFÜHREN</span>
+          </button>
+        </div>
+
+      </aside>
+    </main>
+
+    <!-- ==================== AMBIENT COMMAND DOCK (Unten mittig schwebend) ==================== -->
+    <footer class="relative z-20 px-6 pb-5 pt-2 flex flex-col lg:flex-row items-center justify-between gap-4 bg-gradient-to-t from-[#060911] via-[#060911]/80 to-transparent">
+      
+      <!-- Links: Ansicht-Umschalter (3 klare Modi) -->
+      <div class="flex items-center gap-1.5 p-1 chamfer-pill bg-slate-900/90 border border-slate-700/70">
+        <button onclick="setViewMode('nexus')" id="mode-nexus" class="px-3.5 py-1.5 chamfer-pill text-xs font-mono-tech font-medium bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 transition">
+          ORBITAL NEXUS
+        </button>
+        <button onclick="setViewMode('focus')" id="mode-focus" class="px-3.5 py-1.5 chamfer-pill text-xs font-mono-tech font-medium text-slate-400 hover:text-slate-200 transition">
+          FOKUS-LABOR
+        </button>
+        <button onclick="setViewMode('bridge')" id="mode-bridge" class="px-3.5 py-1.5 chamfer-pill text-xs font-mono-tech font-medium text-slate-400 hover:text-slate-200 transition">
+          C++ AGENT BRIDGE
+        </button>
+      </div>
+
+      <!-- Mitte: Schwebende minimalistische Intent-Eingabeleiste -->
+      <div class="w-full max-w-2xl flex items-center gap-2 px-4 py-2 chamfer-pill bg-slate-950/90 border border-cyan-500/35 shadow-[0_0_30px_rgba(0,240,255,0.08)] focus-within:border-cyan-400 focus-within:shadow-[0_0_35px_rgba(0,240,255,0.22)] transition">
+        <span class="text-cyan-400 font-mono-tech text-xs font-bold">λ&gt;</span>
+        <input
+          id="ambientInput"
+          type="text"
+          placeholder="Ziel oder mathematische Relation eingeben (z. B. 'K4D Beweisnetz Tiefe 4' oder 'Meta-Fusion RoPE + Attention')..."
+          class="w-full bg-transparent text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-mono-tech"
+          onkeydown="if(event.key==='Enter') executeAmbientCommand()"
+        />
+        <button onclick="fillSampleIntent()" title="Beispiel-Hypothese einfügen" class="px-2.5 py-1 text-[10px] font-mono-tech bg-slate-800/90 hover:bg-slate-700 text-slate-300 chamfer-pill shrink-0">
+          IMPULS
+        </button>
+        <button onclick="executeAmbientCommand()" class="px-3.5 py-1 text-xs font-mono-tech font-semibold bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-400/40 chamfer-pill shrink-0 transition">
+          SENDEN
+        </button>
+      </div>
+
+      <!-- Rechts: Ruhige Live-Log-Zeile -->
+      <div class="hidden xl:flex items-center gap-2.5 text-xs font-mono-tech text-slate-400 max-w-xs truncate">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+        <span id="footerLogLine" class="truncate">Bereit • Keine offenen Axiome (sorry-Sperre aktiv)</span>
+      </div>
+
+    </footer>
+
+    <!-- ==================== MODAL: INFO & MATHEMATISCHE HERKUNFT (Ohne alert()) ==================== -->
+    <div id="infoModal" class="hidden absolute inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="w-full max-w-xl chamfer-card p-6 border-cyan-400/50 glow-cyan">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-[10px] font-mono-tech uppercase tracking-widest text-cyan-400">SYSTEM-TRANSPARENZ &amp; PROVENIENZ</span>
+            <h3 class="font-display text-base font-bold text-white mt-0.5">AXION // Mathematische Methodik &amp; Architektur</h3>
+          </div>
+          <button onclick="closeInfoModal()" class="px-2.5 py-1 chamfer-pill bg-slate-800 hover:bg-slate-700 text-xs font-mono-tech text-slate-300">ESC</button>
+        </div>
+        <div class="mt-4 space-y-3 text-xs text-slate-300 leading-relaxed">
+          <p><strong class="text-white">Konzeption &amp; Entwicklung:</strong> Ralf Krümmel (MDraft KR Enterprise)</p>
+          <p><strong class="text-cyan-300">Zweistufiges Mathematisches Orakel:</strong> Jede generierte Hypothese durchläuft zuerst einen dynamischen numerischen Falsifizierer (Gegenbeispiel-Suche in Z/65521Z und R) und wird anschließend formal durch den interaktiven Theorembeweiser <strong>Lean 4 (MetaM)</strong> ohne unbewiesene Axiome (<code>sorry</code>-Sperre) zertifiziert.</p>
+          <p><strong class="text-emerald-300">Spatial Orbital HUD Philosophie:</strong> Statt 7 überladener Tabellen-Reiter und dutzender Eingabefelder arbeitet diese Oberfläche nach dem Prinzip der <em>Progressive Disclosure</em>: 4 thematische Sphären bündeln alle 20 C++20-Kompilate aus <code>KR_BUILD/Release/</code>.</p>
+        </div>
+        <div class="mt-5 pt-3 border-t border-slate-800 flex justify-end">
+          <button onclick="closeInfoModal()" class="px-5 py-2 chamfer-btn bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-xs font-mono-tech text-cyan-200">
+            SCHLIESSEN
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================================
+    // DATENMODELL DER 4 RUHIGEN HAUPT-SPHÄREN (Bündelt alle 20 .exe-Artefakte)
+    // ============================================================================
+    const SPHERES = {
+      research: {
+        id: 'research',
+        tag: 'SPHÄRE 01 // K4D & ZIELE',
+        title: 'AUTONOME FORSCHUNG',
+        shortLabel: 'AUTONOME\nFORSCHUNG',
+        color: '#00F0FF',
+        glowClass: 'glow-cyan',
+        angle: -Math.PI * 0.75,
+        binary: 'axion_engine.exe + math_k4d_research.exe',
+        description: 'Erkundet verzweigte Beweisnetze im 4D-Zellautomaten-Raum (K4D) und entwickelt selbstständig neue mathematische Ziel-Hypothesen.',
+        metricLabel: 'K4D-ATTRAKTOR-STABILITÄT',
+        metricValue: '0.9842 (K4D_GUIDED)',
+        actionText: 'FORSCHUNGSZYKLUS STARTEN (K4D + LEAN 4)',
+        executables: [
+          'axion_engine.exe',
+          'math_autonomous_research.exe',
+          'math_k4d_research.exe',
+          'math_open_goal_lab.exe',
+          'math_meta_goal_lab.exe',
+          'math_open_purpose_v14.exe'
+        ],
+        cards: [
+          {
+            badge: 'MODUS // BEWEISBAUM',
+            title: 'K4D Verzweigtes Beweisnetz (6 Strategien)',
+            subtitle: 'type_synthesis • systematic • random • cross_domain • mutation • iterative',
+            meta: 'Tiefe: Stufe 4 | Verzweigung: 2x binär | sorry-Sperre: Aktiv',
+            status: 'FORMALLY_PROVEN'
+          },
+          {
+            badge: 'DYNAMIK // 4D-HYPERRAUM',
+            title: 'K4D Mikrophysik & Perturbations-Orakel',
+            subtitle: 'Gekoppelte 4D-Gitter-Simulation (Side=6, Steps=24) gegen CONTROL_NO_K',
+            meta: 'Interventionseffekt: 0.142 | Eindeutige Zustände: 100%',
+            status: 'AKTIV'
+          },
+          {
+            badge: 'AUTONOMIE // META-GOALS',
+            title: 'Offene Ziel- & Zweck-Evolution (v14)',
+            subtitle: 'Nicht-redundante Merkmalsbeziehungen über Domain-Shifts hinweg',
+            meta: 'Holdout-Uplift: +0.184 F1 | Seed: 314159',
+            status: 'VALIDIERT'
+          }
+        ]
+      },
+      semantic: {
+        id: 'semantic',
+        tag: 'SPHÄRE 02 // GRAPHEN & KATALOG',
+        title: 'SEMANTIK & ENTDECKUNG',
+        shortLabel: 'SEMANTIK &\nENTDECKUNG',
+        color: '#00E5A3',
+        glowClass: 'glow-emerald',
+        angle: -Math.PI * 0.25,
+        binary: 'math_semantic_discovery.exe + math_multi_relation.exe',
+        description: 'Analysiert 2,36 Mio. mathematische Deklarationen strikt schreibgeschützt (Read-Only) und findet mehrstufige Brückenpfade zwischen Domänen.',
+        metricLabel: 'LAPLACE-SPEKTRAL-ENTROPIE',
+        metricValue: 'H = 4.6219 bits (Invariant)',
+        actionText: 'SEMANTISCHE BRÜCKENPFADE EXTRAHIEREN',
+        executables: [
+          'math_semantic_discovery.exe',
+          'math_semantic_catalog.exe',
+          'math_multi_relation.exe'
+        ],
+        cards: [
+          {
+            badge: 'QUELL-KATALOG // READ-ONLY',
+            title: 'Vollständiger Mathematischer Deklarations-Index',
+            subtitle: '2.369.933 indizierte Theoreme, Lemmata & Definitionen (PRAGMA query_only=ON)',
+            meta: 'Zertifikat-Filter: Aktiv | Domänen-Gewichtung: Balanciert',
+            status: 'GESCHÜTZT'
+          },
+          {
+            badge: 'TOPOLOGIE // PFADSUCHE',
+            title: 'Multi-Relationale 2-Kanten-Brücken (A → B → C)',
+            subtitle: 'Verbindet Algebra, Topologie und Zahlentheorie über gemeinsame Typ-Signatur',
+            meta: 'Gefundene Brücken: 1.420 | Typ-Kompatibilität: Geprüft',
+            status: 'BEREIT'
+          },
+          {
+            badge: 'SPEKTRAL // CAYLEY-GRAPH',
+            title: 'Basis-Invariante Fourier- & Spektral-Projektion',
+            subtitle: 'Exakte DFT-Eigenwerte ohne numerische Basis-Artefakte in Z_n',
+            meta: 'Residuum < 1e-12 | Parseval-Norm: Exakt',
+            status: 'EXAKT'
+          }
+        ]
+      },
+      synthesis: {
+        id: 'synthesis',
+        tag: 'SPHÄRE 03 // C++20 & META-FUSION',
+        title: 'SYNTHESE & DESIGN',
+        shortLabel: 'SYNTHESE &\nDESIGN',
+        color: '#FFB800',
+        glowClass: 'glow-amber',
+        angle: Math.PI * 0.25,
+        binary: 'math_software_lab.exe + math_application_designer.exe',
+        description: 'Verschmilzt bewiesene mathematische Strukturen (z. B. Galois-Rekurrenz & SO(2) RoPE) zu kompilierbaren, divisionsfreien C++20-Kernen.',
+        metricLabel: 'ORACLE-SPEEDUP // MRE_0 → MRE_3',
+        metricValue: '0.194x Laufzeit (5.15x schneller)',
+        actionText: 'C++20 KERNEL & META-FUSION SYNTHETISIEREN',
+        executables: [
+          'math_application_designer.exe',
+          'math_application_discovery.exe',
+          'math_application_evaluator.exe',
+          'math_application_language.exe',
+          'math_software_lab.exe',
+          'math_gui_probe.exe'
+        ],
+        cards: [
+          {
+            badge: 'META-FUSION // HYBRID-FAMILIE',
+            title: 'Galois-Ring Rekurrenz × SO(2) Givens-RoPE',
+            subtitle: 'In-Situ gefaltete 2D-Planar-Rotation ohne Zwischenallokation (O(1) Stride-Hoisted)',
+            meta: 'Oracle-Äquivalenz: 10 / 10 (Δ = 0.00e+00) | Z/65521Z',
+            status: 'PROMOTED'
+          },
+          {
+            badge: 'ALGORITHMEN-LABOR // BARRETT',
+            title: 'Divisionsfreie Festkomma-Reduktion & Horner-Form',
+            subtitle: 'Ersetzt teure CPU-Divisionen durch Reziprok-Multiplikator 65551 im Ring',
+            meta: 'Durchsatz: 412M Zeilen/s | Warnungsfrei unter /W4 /WX',
+            status: 'OPTIMIERT'
+          },
+          {
+            badge: 'OPERATOR-SPRACHE // MRE_APP_1',
+            title: 'Typisierte Operatorgraphen & Win32-Anwendungsdesign',
+            subtitle: 'Automatische Synthese, Kompilierung und GUI-Probe-Verifikation',
+            meta: 'Compiler: KR-Portable LLVM-MinGW / MSVC x64',
+            status: 'VERIFIZIERT'
+          }
+        ]
+      },
+      memory: {
+        id: 'memory',
+        tag: 'SPHÄRE 04 // LINEAGE & AUDIT',
+        title: 'GEDÄCHTNIS & AUDIT',
+        shortLabel: 'GEDÄCHTNIS &\nAUDIT',
+        color: '#A855F7',
+        glowClass: 'glow-cyan',
+        angle: Math.PI * 0.75,
+        binary: 'math_research_memory.exe + math_research_audit.exe',
+        description: 'Bewahrt das Gedächtnis des Scheiterns (Failure Memory), verhindert Endlosschleifen und sichert den 7-stufigen mathematischen Herkunftsnachweis.',
+        metricLabel: 'SQLITE3 WAL INTEGRITÄT',
+        metricValue: '18 / 18 Selbsttests bestanden',
+        actionText: 'PROVENIENZ & EVIDENZ-AUDIT AUSFÜHREN',
+        executables: [
+          'math_research_memory.exe',
+          'math_research_audit.exe',
+          'axion_ide.exe',
+          'math_research_ide.exe',
+          'math_research_v03.exe'
+        ],
+        cards: [
+          {
+            badge: 'FAILURE MEMORY // NOVELTY GATE',
+            title: 'Gedächtnis des Scheiterns & Duplikat-Sperre',
+            subtitle: 'Blockiert bereits bekannte Algorithmus-Fingerabdrücke und verworfene Hypothesen',
+            meta: 'Gespeicherte Fingerabdrücke: 48 | Wiederholungsrate: 0%',
+            status: 'AKTIV'
+          },
+          {
+            badge: 'ORACLE VAULT // UNANTASTBAR',
+            title: 'Isolierte Referenz-Prüfinstanz (10 Gold-Vektoren)',
+            subtitle: 'Kein Kandidat im Mutation-Lab darf Testfälle oder Toleranzen (1e-9) modifizieren',
+            meta: 'Vault-Status: Versiegelt | Rollback-Schutz: Bereit',
+            status: 'VERSIEGELT'
+          },
+          {
+            badge: 'PROVENIENZ // 7-STUFEN-KETTE',
+            title: 'Lückenlose Abstammungs-Dokumentation',
+            subtitle: 'Originalcode → Struktur → DB-Theorem → Hypothese → Mutation → Orakel → MRE_n',
+            meta: 'SQLite3 v3.53.4 (WAL) | Reproduzierbare PRNG-Seeds',
+            status: 'AUDITIERT'
+          }
+        ]
+      }
+    };
+
+    let activeSphereKey = 'research';
+    let currentViewMode = 'nexus';
+    let zenMode = false;
+    let cycleAnimationBoost = 0;
+    let wavePhase = 0;
+
+    // ============================================================================
+    // INITIALISIERUNG & UI-STEUERUNG
+    // ============================================================================
+    function selectSphere(key) {
+      if (!SPHERES[key]) return;
+      activeSphereKey = key;
+      const s = SPHERES[key];
+
+      // Linke Navigation hervorheben
+      ['research', 'semantic', 'synthesis', 'memory'].forEach(k => {
+        const btn = document.getElementById('nav-' + k);
+        if (!btn) return;
+        if (k === key) {
+          btn.style.borderColor = s.color;
+          btn.style.boxShadow = `0 0 25px ${s.color}22`;
+        } else {
+          btn.style.borderColor = 'rgba(0, 240, 255, 0.14)';
+          btn.style.boxShadow = 'none';
+        }
+      });
+
+      // Rechtes Fokus-Panel ruhig aktualisieren (maximal 3 Karten)
+      document.getElementById('focusClusterTag').textContent = s.tag;
+      document.getElementById('focusClusterTag').style.color = s.color;
+      document.getElementById('focusTitle').textContent = s.title;
+      document.getElementById('focusDescription').textContent = s.description;
+      document.getElementById('liveVisTitle').textContent = s.metricLabel;
+      document.getElementById('liveMetricValue').textContent = s.metricValue;
+      document.getElementById('activeBinaryName').textContent = s.binary;
+      document.getElementById('primaryActionText').textContent = s.actionText;
+
+      const container = document.getElementById('focusCardsContainer');
+      container.innerHTML = s.cards.map((c, idx) => `
+        <div onclick="inspectCard(${idx})" class="chamfer-card p-3.5 cursor-pointer border border-slate-800 hover:border-cyan-400/50 transition group">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tech uppercase tracking-wider" style="color:${s.color}">${c.badge}</span>
+            <span class="text-[10px] font-mono-tech px-2 py-0.5 bg-slate-900 text-slate-300 border border-slate-700">${c.status}</span>
+          </div>
+          <div class="text-xs sm:text-sm font-semibold text-white mt-1 group-hover:text-cyan-200 transition">${c.title}</div>
+          <div class="text-[11px] text-slate-400 mt-1 leading-snug">${c.subtitle}</div>
+          <div class="text-[10px] font-mono-tech text-slate-500 mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between">
+            <span>${c.meta}</span>
+            <span class="text-cyan-400 opacity-0 group-hover:opacity-100 transition">INSPIZIEREN →</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('footerLogLine').textContent =
+        `Sphäre [${s.title}] fokussiert • ${s.executables.length} zugeordnete C++20-Kerne bereit`;
+      cycleAnimationBoost = 1.0;
+    }
+
+    function inspectCard(cardIndex) {
+      const s = SPHERES[activeSphereKey];
+      const c = s.cards[cardIndex];
+      if (!c) return;
+      cycleAnimationBoost = 1.4;
+      document.getElementById('focusStateBadge').textContent = c.status;
+      document.getElementById('footerLogLine').textContent =
+        `Fokus-Inspektion: ${c.title} (${c.meta})`;
+    }
+
+    function triggerPrimarySphereAction() {
+      const s = SPHERES[activeSphereKey];
+      cycleAnimationBoost = 2.6;
+      const badge = document.getElementById('focusStateBadge');
+      badge.textContent = 'ZYKLUS AKTIV...';
+      badge.className = 'px-2.5 py-1 chamfer-pill text-[10px] font-mono-tech bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 animate-pulse';
+
+      const newSeed = Math.floor(100000 + Math.random() * 899999);
+      document.getElementById('activeSeedBadge').textContent = newSeed;
+      document.getElementById('CalmProgressBar').style.width = '100%';
+      document.getElementById('footerLogLine').textContent =
+        `Starte ${s.binary} mit PRNG-Seed ${newSeed} • Orakel-Prüfung läuft...`;
+
+      setTimeout(() => {
+        badge.textContent = 'VERIFIZIERT';
+        badge.className = 'px-2.5 py-1 chamfer-pill text-[10px] font-mono-tech bg-cyan-500/20 text-cyan-300 border border-cyan-400/50';
+        document.getElementById('footerLogLine').textContent =
+          `Zyklus erfolgreich abgeschlossen (${s.title}) • 100% Oracle-Äquivalenz in SQLite gespeichert`;
+      }, 1800);
+    }
+
+    function setViewMode(mode) {
+      currentViewMode = mode;
+      const bridgeModal = document.getElementById('agentBridgeModal');
+      const leftNav = document.getElementById('leftClusterNav');
+      const rightPanel = document.getElementById('rightFocusPanel');
+
+      ['nexus', 'focus', 'bridge'].forEach(m => {
+        const btn = document.getElementById('mode-' + m);
+        if (m === mode) {
+          btn.className = 'px-3.5 py-1.5 chamfer-pill text-xs font-mono-tech font-medium bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 transition';
+        } else {
+          btn.className = 'px-3.5 py-1.5 chamfer-pill text-xs font-mono-tech font-medium text-slate-400 hover:text-slate-200 transition';
+        }
+      });
+
+      if (mode === 'bridge') {
+        bridgeModal.classList.remove('hidden');
+        renderArtifactMatrix();
+      } else {
+        bridgeModal.classList.add('hidden');
+      }
+
+      if (mode === 'focus') {
+        leftNav.classList.add('opacity-40', 'scale-95');
+        rightPanel.classList.add('scale-[1.02]');
+      } else {
+        leftNav.classList.remove('opacity-40', 'scale-95');
+        rightPanel.classList.remove('scale-[1.02]');
+      }
+    }
+
+    function renderArtifactMatrix() {
+      const grid = document.getElementById('artifactMatrixGrid');
+      const allClusters = Object.values(SPHERES);
+      grid.innerHTML = allClusters.map(s => `
+        <div class="chamfer-card p-3.5 border border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-display text-xs font-bold" style="color:${s.color}">${s.title}</span>
+            <span class="text-[10px] font-mono-tech text-slate-400">${s.executables.length} Kompilate</span>
+          </div>
+          <div class="space-y-1">
+            ${s.executables.map(exe => `
+              <div class="flex items-center justify-between text-[11px] font-mono-tech bg-slate-950/80 px-2.5 py-1 border border-slate-800/80">
+                <span class="text-slate-200">${exe}</span>
+                <span class="text-emerald-400 text-[10px]">READY</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function simulateAllSelftests() {
+      cycleAnimationBoost = 3.0;
+      document.getElementById('hudOracleStatus').textContent = '18/18 SELFTESTS PASSED';
+      document.getElementById('footerLogLine').textContent =
+        'axion_engine.exe selftest -> 18 / 18 Spezifikationstests bestanden (ExitCode 0)';
+      setViewMode('nexus');
+    }
+
+    function fillSampleIntent() {
+      const samples = [
+        'K4D Beweisnetz Tiefe 4 mit Strategie type_synthesis starten',
+        'Meta-Fusion: KERNEL_CANDIDATE_42_0 × LLM_ROPE_ROTARY verschmelzen',
+        'Multi-Relationen Brückenpfade zwischen Algebra und Topologie prüfen',
+        'Divisionsfreie Barrett-Reduktion in Z/65521Z gegen Gold-Orakel testen'
+      ];
+      const input = document.getElementById('ambientInput');
+      input.value = samples[Math.floor(Math.random() * samples.length)];
+      input.focus();
+    }
+
+    function executeAmbientCommand() {
+      const input = document.getElementById('ambientInput');
+      const val = input.value.trim();
+      if (!val) {
+        fillSampleIntent();
+        return;
+      }
+      const lower = val.toLowerCase();
+      if (lower.includes('rope') || lower.includes('fusion') || lower.includes('kernel') || lower.includes('c++')) {
+        selectSphere('synthesis');
+      } else if (lower.includes('semantik') || lower.includes('pfad') || lower.includes('topologie')) {
+        selectSphere('semantic');
+      } else if (lower.includes('audit') || lower.includes('sqlite') || lower.includes('gedächtnis')) {
+        selectSphere('memory');
+      } else {
+        selectSphere('research');
+      }
+      triggerPrimarySphereAction();
+      input.value = '';
+    }
+
+    function toggleZenMode() {
+      zenMode = !zenMode;
+      const leftNav = document.getElementById('leftClusterNav');
+      const rightPanel = document.getElementById('rightFocusPanel');
+      if (zenMode) {
+        leftNav.style.opacity = '0';
+        leftNav.style.pointerEvents = 'none';
+        rightPanel.style.opacity = '0';
+        rightPanel.style.pointerEvents = 'none';
+        document.getElementById('footerLogLine').textContent = 'Zen-Orbital-Modus aktiv • Klicken Sie erneut auf [-] zum Einblenden';
+      } else {
+        leftNav.style.opacity = '1';
+        leftNav.style.pointerEvents = 'auto';
+        rightPanel.style.opacity = '1';
+        rightPanel.style.pointerEvents = 'auto';
+        document.getElementById('footerLogLine').textContent = 'Standard Spatial HUD wiederhergestellt';
+      }
+    }
+
+    function toggleFullscreenSimulation() {
+      const shell = document.getElementById('hud-shell');
+      shell.classList.toggle('max-w-[1720px]');
+      shell.classList.toggle('max-h-[1020px]');
+    }
+
+    function triggerPowerDown() {
+      const shell = document.getElementById('hud-shell');
+      shell.style.opacity = '0.25';
+      document.getElementById('footerLogLine').textContent = 'WAL-Checkpoint geschrieben • System im Standby (Klick reaktiviert)';
+      setTimeout(() => { shell.style.opacity = '1'; }, 1200);
+    }
+
+    function openInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function closeInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    // ============================================================================
+    // INTERAKTIVER 60FPS HTML5 CANVAS: AXION CORE & 4 KLICKBARE SPHÄREN
+    // ============================================================================
+    const canvas = document.getElementById('orbitalCanvas');
+    const ctx = canvas.getContext('2d');
+    const miniCanvas = document.getElementById('miniWaveCanvas');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    let width = 0, height = 0;
+    let mouseX = 0, mouseY = 0;
+    let hoveredSphereKey = null;
+    let time = 0;
+
+    // Hintergrund-Partikel für räumliche Tiefe
+    const stars = Array.from({ length: 55 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 0.7 + Math.random() * 1.4,
+      alpha: 0.15 + Math.random() * 0.45,
+      speed: 0.00015 + Math.random() * 0.0003
+    }));
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+      const mRect = miniCanvas.getBoundingClientRect();
+      miniCanvas.width = mRect.width * window.devicePixelRatio;
+      miniCanvas.height = mRect.height * window.devicePixelRatio;
+      miniCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Berechnet die Bildschirmkoordinaten der 4 Orbital-Sphären
+    function getSphereNodes() {
+      const cx = width * 0.48;
+      const cy = height * 0.49;
+      const orbitRadius = Math.min(width, height) * 0.255;
+
+      return Object.values(SPHERES).map((s, idx) => {
+        const dynamicAngle = s.angle + Math.sin(time * 0.35 + idx) * 0.035;
+        return {
+          ...s,
+          x: cx + Math.cos(dynamicAngle) * orbitRadius,
+          y: cy + Math.sin(dynamicAngle) * orbitRadius,
+          r: s.id === activeSphereKey ? 44 : 36
+        };
+      });
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+
+      const nodes = getSphereNodes();
+      hoveredSphereKey = null;
+      for (const n of nodes) {
+        const dx = mouseX - n.x;
+        const dy = mouseY - n.y;
+        if (Math.hypot(dx, dy) <= n.r + 10) {
+          hoveredSphereKey = n.id;
+          break;
+        }
+      }
+      canvas.style.cursor = hoveredSphereKey ? 'pointer' : 'default';
+    });
+
+    canvas.addEventListener('click', () => {
+      if (hoveredSphereKey) {
+        selectSphere(hoveredSphereKey);
+      }
+    });
+
+    function drawOrbitalScene() {
+      ctx.clearRect(0, 0, width, height);
+
+      const cx = width * 0.48;
+      const cy = height * 0.49;
+      const baseR = Math.min(width, height) * 0.255;
+
+      // 1. Subtiles zentrales Radial-Lichtfeld
+      const activeSphere = SPHERES[activeSphereKey];
+      const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, baseR * 1.45);
+      grad.addColorStop(0, activeSphere.color + '18');
+      grad.addColorStop(0.55, '#00F0FF08');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Ruhige Hintergrund-Partikel
+      for (const st of stars) {
+        st.y -= st.speed * (1 + cycleAnimationBoost);
+        if (st.y < 0) st.y = 1;
+        ctx.fillStyle = `rgba(148, 163, 184, ${st.alpha})`;
+        ctx.beginPath();
+        ctx.arc(st.x * width, st.y * height, st.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 3. Äußere Orbital-Ringe
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.setLineDash([6, 10]);
+      ctx.strokeStyle = 'rgba(0, 229, 163, 0.16)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseR * 0.62, time * 0.2, time * 0.2 + Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // 4. Verbindungen vom AXION CORE zu den 4 Sphären
+      const nodes = getSphereNodes();
+      for (const n of nodes) {
+        const isSelected = n.id === activeSphereKey;
+        ctx.save();
+        ctx.strokeStyle = isSelected ? n.color : 'rgba(100, 116, 139, 0.25)';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(n.x, n.y);
+        ctx.stroke();
+
+        // Datenimpuls auf der aktiven Verbindungslinie
+        if (isSelected) {
+          const tPulse = (time * 0.9) % 1;
+          const px = cx + (n.x - cx) * tPulse;
+          const py = cy + (n.y - cy) * tPulse;
+          ctx.fillStyle = n.color;
+          ctx.shadowColor = n.color;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 5. ZENTRALER AXION CORE (4D K4D-Oktaeder/Hypercube-Projektion + Pulsring)
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // Rotierender K4D-Geometrie-Kern
+      const coreRadius = 54 + Math.sin(time * 2.2) * 3;
+      ctx.strokeStyle = activeSphere.color;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = activeSphere.color;
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Innere 4D-Gitter-Projektion (8 Knoten)
+      const pts = [];
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + time * 0.45;
+        const r = (i % 2 === 0) ? coreRadius * 0.68 : coreRadius * 0.36;
+        pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.38)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          if ((j - i) === 1 || (j - i) === 3 || (j - i) === 7) {
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Kern-Beschriftung
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '700 11px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('AXION CORE', 0, -2);
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '500 9px "JetBrains Mono", monospace';
+      ctx.fillText('K4D // LEAN 4', 0, 12);
+      ctx.restore();
+
+      // 6. DIE 4 KLICKBAREN HAUPT-SPHÄREN RENDERN
+      for (const n of nodes) {
+        const isSelected = n.id === activeSphereKey;
+        const isHovered = n.id === hoveredSphereKey;
+
+        ctx.save();
+        ctx.translate(n.x, n.y);
+
+        // Äußerer Biolumineszenz-Halo bei Auswahl/Hover
+        if (isSelected || isHovered) {
+          ctx.strokeStyle = n.color;
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = n.color;
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(0, 0, n.r + 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Sphären-Hintergrund
+        ctx.fillStyle = isSelected ? 'rgba(12, 22, 38, 0.95)' : 'rgba(8, 13, 24, 0.90)';
+        ctx.strokeStyle = isSelected ? n.color : 'rgba(100, 116, 139, 0.45)';
+        ctx.lineWidth = isSelected ? 2.2 : 1.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, n.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Text in der Sphäre
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = isSelected ? '#FFFFFF' : '#CBD5E1';
+        ctx.font = '700 9px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        const lines = n.shortLabel.split('\n');
+        ctx.fillText(lines[0], 0, -3);
+        ctx.fillText(lines[1] || '', 0, 9);
+
+        ctx.restore();
+      }
+
+      // 7. Mini-Telemetrie-Wellenform im rechten Fokus-Panel zeichnen
+      const mw = miniCanvas.clientWidth;
+      const mh = miniCanvas.clientHeight;
+      miniCtx.clearRect(0, 0, mw, mh);
+      miniCtx.strokeStyle = activeSphere.color;
+      miniCtx.lineWidth = 1.6;
+      miniCtx.beginPath();
+      for (let x = 0; x < mw; x += 3) {
+        const y = mh * 0.5
+          + Math.sin(x * 0.045 + wavePhase) * (mh * 0.26)
+          + Math.cos(x * 0.11 - wavePhase * 1.4) * (mh * 0.12);
+        if (x === 0) miniCtx.moveTo(x, y);
+        else miniCtx.lineTo(x, y);
+      }
+      miniCtx.stroke();
+
+      time += 0.016 * (1 + cycleAnimationBoost);
+      wavePhase += 0.06 * (1 + cycleAnimationBoost);
+      cycleAnimationBoost *= 0.96;
+
+      requestAnimationFrame(drawOrbitalScene);
+    }
+
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      selectSphere('research');
+      drawOrbitalScene();
+    });
+  </script>
+</body>
+</html>
