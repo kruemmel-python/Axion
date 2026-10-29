@@ -628,11 +628,29 @@ void initializeSpheres() {
     }
 }
 
+void ensureDatabaseInitialized(const fs::path& dbPath, const char* initSql) {
+    if (!fs::exists(dbPath)) {
+        try {
+            if (dbPath.has_parent_path()) {
+                fs::create_directories(dbPath.parent_path());
+            }
+        } catch (...) {}
+        sqlite3* db = nullptr;
+        int rc = sqlite3_open_v2(narrow(dbPath.wstring()).c_str(), &db, SQLITE_OPEN_READWRITE | 0x00000004, nullptr);
+        if (rc == SQLITE_OK && db) {
+            sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+            sqlite3_exec(db, initSql, nullptr, nullptr, nullptr);
+            sqlite3_close(db);
+        }
+    }
+}
+
 void checkDatabasePaths() {
-    std::array<fs::path, 4> candidates = {
+    std::array<fs::path, 5> candidates = {
         g_hud.projectRootPath / L"data" / L"research.sqlite",
         g_hud.projectRootPath / L"research.sqlite",
         fs::path(L"F:\\MathResearchDB_Backup_20261009\\research.sqlite"),
+        fs::path(L"F:\\MathResearchDB_v0_2\\research.sqlite"),
         fs::path(L"data\\research.sqlite")
     };
     for (const auto& p : candidates) {
@@ -643,9 +661,40 @@ void checkDatabasePaths() {
         }
     }
     g_hud.k4dResultsDb = g_hud.projectRootPath / L"k4d_six_results.sqlite";
+    ensureDatabaseInitialized(g_hud.k4dResultsDb,
+        "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY, description TEXT, applied_at TEXT);"
+        "CREATE TABLE IF NOT EXISTS candidates ("
+        "  id INTEGER PRIMARY KEY, seed INTEGER NOT NULL, ordinal INTEGER NOT NULL,"
+        "  strategy TEXT NOT NULL, chain_depth INTEGER DEFAULT 0, parent_id INTEGER DEFAULT 0,"
+        "  mode TEXT DEFAULT 'K4D_GUIDED', status TEXT NOT NULL, source_a TEXT, source_b TEXT,"
+        "  details TEXT, verification_duration_ms INTEGER DEFAULT 0, lean_code TEXT,"
+        "  created_at TEXT DEFAULT CURRENT_TIMESTAMP"
+        ");"
+    );
+
     g_hud.algorithmLabDb = g_hud.projectRootPath / L"algorithm_lab_results.sqlite";
+    ensureDatabaseInitialized(g_hud.algorithmLabDb,
+        "CREATE TABLE IF NOT EXISTS algorithm_lab ("
+        "  id INTEGER PRIMARY KEY, operator_formula TEXT, candidate_ns REAL, baseline_ns REAL,"
+        "  equivalence TEXT, artifact_path TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP"
+        ");"
+    );
+
     g_hud.evoLineageDb = g_hud.projectRootPath / L"evolution_lineage.sqlite";
+    ensureDatabaseInitialized(g_hud.evoLineageDb,
+        "CREATE TABLE IF NOT EXISTS generations ("
+        "  id INTEGER PRIMARY KEY, family_id TEXT, gen_index INTEGER, complexity_class TEXT,"
+        "  algo_fingerprint TEXT, status TEXT, speedup_ratio REAL, cases_passed INTEGER,"
+        "  cases_failed INTEGER, hypothesis TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP"
+        ");"
+        "CREATE TABLE IF NOT EXISTS failure_memory ("
+        "  id INTEGER PRIMARY KEY, fingerprint TEXT NOT NULL, family_id TEXT, reason TEXT,"
+        "  created_at TEXT DEFAULT CURRENT_TIMESTAMP"
+        ");"
+    );
+
     g_hud.evoWorkspaceDir = g_hud.projectRootPath / L"evolution_workspace";
+    try { fs::create_directories(g_hud.evoWorkspaceDir); } catch (...) {}
 }
 
 // --- ListView Spalten & Daten Management ---
@@ -693,8 +742,8 @@ std::wstring getSelectedTableRowItem(int col) {
 void querySqliteToTable(const fs::path& dbPath, const char* sql, const std::string& arg = "") {
     if (!g_hud.rows) return;
     if (!fs::exists(dbPath)) {
-        setTableColumns({L"Hinweis"});
-        addTableRow({L"Datenbank noch nicht initialisiert: " + dbPath.wstring()});
+        setTableColumns({L"Status", L"Hinweis"});
+        addTableRow({L"Bereit", L"Datenbank initialisiert. Klicken Sie auf 'Forschung starten' / 'Meta-Fusion starten'."});
         return;
     }
 
@@ -742,6 +791,14 @@ void querySqliteToTable(const fs::path& dbPath, const char* sql, const std::stri
         }
         addTableRow(entry);
         ++rowsCount;
+    }
+    if (rowsCount == 0 && cols > 0) {
+        std::vector<std::wstring> emptyRow;
+        emptyRow.push_back(L"–");
+        if (cols > 1) emptyRow.push_back(L"Bereit");
+        if (cols > 2) emptyRow.push_back(L"Noch keine Datensätze. Klicken Sie oben auf 'Forschung starten'.");
+        while (emptyRow.size() < static_cast<size_t>(cols)) emptyRow.push_back(L"–");
+        addTableRow(emptyRow);
     }
     sqlite3_finalize(st);
     sqlite3_close(db);
