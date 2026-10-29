@@ -1941,7 +1941,7 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         FillRect(memDc, &fullRc, modalDimB);
         DeleteObject(modalDimB);
 
-        int mw = 640, mh = 440;
+        int mw = 740, mh = 510;
         int mx0 = (w - mw) / 2;
         int my0 = 64 + (h - 64 - mh) / 2;
         RECT mBox{mx0, my0, mx0 + mw, my0 + mh};
@@ -1957,34 +1957,44 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
 
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.textMain);
-        TextOutW(memDc, mBox.left + 24, mBox.top + 80, L"Entwickler & Konzeption:", 24);
+        TextOutW(memDc, mBox.left + 24, mBox.top + 76, L"Entwickler & Konzeption:", 24);
         SelectObject(memDc, g_hud.fontSans);
         SetTextColor(memDc, RGB(255, 255, 255));
-        TextOutW(memDc, mBox.left + 190, mBox.top + 80, L"Ralf Krümmel (MDraft KR Enterprise)", 35);
+        TextOutW(memDc, mBox.left + 200, mBox.top + 76, L"Ralf Krümmel (MDraft KR Enterprise)", 35);
 
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.accentPrimary);
-        TextOutW(memDc, mBox.left + 24, mBox.top + 112, L"Zweistufiges Mathematisches Orakel:", 35);
+        TextOutW(memDc, mBox.left + 24, mBox.top + 104, L"Zweistufiges Mathematisches Orakel:", 35);
         SelectObject(memDc, g_hud.fontSans);
         SetTextColor(memDc, th.textMain);
-        RECT mText1{mBox.left + 24, mBox.top + 132, mBox.right - 24, mBox.top + 190};
+        RECT mText1{mBox.left + 24, mBox.top + 124, mBox.right - 24, mBox.top + 172};
         DrawTextW(memDc,
             L"Jede Hypothese durchläuft zuerst einen schnellen numerischen Falsifizierer (Gegenbeispiel-Suche in Z/65521Z und R) und wird anschließend formal durch den interaktiven Theorembeweiser Lean 4 (MetaM) ohne unbewiesene Axiome (sorry-Sperre) zertifiziert.",
             -1, &mText1, DT_LEFT | DT_WORDBREAK);
 
         SelectObject(memDc, g_hud.fontSansBold);
-        SetTextColor(memDc, th.accentSecondary);
-        TextOutW(memDc, mBox.left + 24, mBox.top + 198, L"Herkunft der mathematischen Algorithmen:", 40);
+        SetTextColor(memDc, th.accentTertiary);
+        TextOutW(memDc, mBox.left + 24, mBox.top + 180, L"Mathematischer Wissenskorpus (research.sqlite // OpenAI & Mathlib):", 67);
         SelectObject(memDc, g_hud.fontSans);
         SetTextColor(memDc, th.textMain);
-        RECT mText2{mBox.left + 24, mBox.top + 218, mBox.right - 24, mBox.top + 276};
+        RECT mTextDb{mBox.left + 24, mBox.top + 200, mBox.right - 24, mBox.top + 276};
+        DrawTextW(memDc,
+            L"Der 1,49 GB Korpus (2.369.933 Formalisierungen, 149k Modul-Abhängigkeiten in 48.266 Dateien) basiert auf den von OpenAI veröffentlichten formalen mathematischen Forschungsunterlagen (OAI Formal Math Dataset / miniF2F) kombiniert mit Mathlib für Lean 4. Er wurde von Ralf Krümmel normalisiert und in eine hochperformante B-Tree Struktur überführt (PRAGMA query_only=ON).",
+            -1, &mTextDb, DT_LEFT | DT_WORDBREAK);
+
+        SelectObject(memDc, g_hud.fontSansBold);
+        SetTextColor(memDc, th.accentSecondary);
+        TextOutW(memDc, mBox.left + 24, mBox.top + 286, L"Herkunft der mathematischen Algorithmen:", 40);
+        SelectObject(memDc, g_hud.fontSans);
+        SetTextColor(memDc, th.textMain);
+        RECT mText2{mBox.left + 24, mBox.top + 306, mBox.right - 24, mBox.top + 360};
         DrawTextW(memDc,
             L"K4D-Mikrophysik, Galois-Rekurrenz, SO(2) Givens-RoPE, divisionsfreie Barrett-Reduktion und spektrale Laplace-Graph-Dekomposition.",
             -1, &mText2, DT_LEFT | DT_WORDBREAK);
 
         SelectObject(memDc, g_hud.fontMonoSmall);
         SetTextColor(memDc, th.accentTertiary);
-        RECT mText3{mBox.left + 24, mBox.top + 284, mBox.right - 24, mBox.top + 320};
+        RECT mText3{mBox.left + 24, mBox.top + 372, mBox.right - 24, mBox.top + 400};
         DrawTextW(memDc, L"Lizenz: MIT License  |  Compiler: KR-Portable LLVM-MinGW / MSVC C++20", -1, &mText3, DT_LEFT | DT_SINGLELINE);
 
         RECT mCloseRc{mBox.right - 140, mBox.bottom - 46, mBox.right - 24, mBox.bottom - 16};
@@ -2468,7 +2478,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         // Info Modal Klicks
         if (g_hud.infoModalOpen) {
-            int mw = 640, mh = 440;
+            int mw = 740, mh = 510;
             int mx0 = (w - mw) / 2;
             int my0 = 64 + (h - 64 - mh) / 2;
             RECT mBox{mx0, my0, mx0 + mw, my0 + mh};

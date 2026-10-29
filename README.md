@@ -138,16 +138,23 @@ Ausführliche mathematische Hintergründe finden Sie in [docs/MATHEMATICAL_FOUND
 
 ---
 
-## 📚 Mathematischer Wissenskorpus (2,37 Millionen Formeln & Theoreme)
+## 📚 Mathematischer Wissenskorpus & Daten-Provenienz (2,37 Millionen Formeln & Theoreme)
 
-Axion greift auf einen umfangreichen mathematischen Wissenskorpus (`research.sqlite`) zu, der über 2,36 Millionen mathematische Definitionen, Typen, Prämissen und Formeln umfasst:
-* **`declarations`:** **2.369.933** mathematische Aussagen & Theoreme
+Axion greift auf einen umfangreichen mathematischen Wissenskorpus (`research.sqlite`) zu, der über **2,36 Millionen** mathematische Definitionen, Typen, Prämissen und Formeln umfasst:
+* **`declarations`:** **2.369.933** mathematische Aussagen & Theoreme (966k `def`, 960k `theorem`, 420k `lemma`, 10k `abbrev`, 7k `instance`, etc.)
 * **`imports`:** **149.204** relationale Modul-Abhängigkeiten
 * **`files`:** **48.266** Quell-Dateien
 
+### 🏛️ Herkunft & Provenienz: OpenAI-Forschungsunterlagen & Mathlib
+Der mathematische Korpus von Axion basiert auf den **offiziellen, von OpenAI veröffentlichten formalen mathematischen Forschungsunterlagen und Formalisierungs-Korpora** (u. a. *OpenAI Formal Math Dataset*, *miniF2F*, *OAI Mathematical Reasoning Benchmarks* im Namespace `OAI`), kombiniert mit der standardisierten mathematischen Bibliothek **Mathlib** für den interaktiven Theorembeweiser **Lean 4**.
+
+**MDraft KR Enterprise (Ralf Krümmel)** hat diese Original-Forschungsdaten akquiriert, normalisiert (u. a. plattformübergreifende Pfade, Bereinigung redundanter Imports, Ausschluss von Zwischenzertifikaten) und in eine hochperformante, schreibgeschützte SQLite3-B-Tree-Datenbank überführt (`PRAGMA query_only = ON;`).
+
+> 📖 **Ausführliche Dokumentation zur Entstehung, dem Tabellenschema und der Ingestion-Pipeline finden Sie in [docs/DATASET_PROVENANCE.md](docs/DATASET_PROVENANCE.md).**
+
 ### 📥 Download der Datenbank
 Die vorbereitete Datenbank steht als komprimiertes Release-Asset auf GitHub bereit:
-* **Asset-Download:** [Axion-Mathematical-Corpus-2.3M-research-db.zip](https://github.com/kruemmel-python/Axion/releases/download/v1.0.0/Axion-Mathematical-Corpus-2.3M-research-db.zip)
+* **Asset-Download:** [Axion-Mathematical-Corpus-2.3M-research-db.zip](https://github.com/kruemmel-python/Axion/releases/download/v1.0.0/Axion-Mathematical-Corpus-2.3M-research-db.zip) *(ca. 490 MB ZIP / 1,49 GB entpackt)*
 
 ### 🔌 Einbindung in Axion
 
