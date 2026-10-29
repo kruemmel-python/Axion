@@ -2,16 +2,13 @@
 // AXION // MATH RESEARCH IDE v4.0.3 — BORDERLESS SPATIAL ORBITAL HUD
 // Entwickler: Ralf Krümmel (MDraft KR Enterprise)
 //
-// Vollständige Synthese:
-// - Futuristisches Spatial Orbital HUD (WS_POPUP, Chamfered Region, 60 FPS Orbit)
-// - 4 Design-Templates (Deep Obsidian, Solaris Amber, Hyperdrive Cobalt, Biolith Emerald)
-// - Einstellungsmenü für Theme & Schriftgrößen (Kompakt, Standard, Groß)
-// - Alle manuellen Funktionen:
-//     * K4D Research Lab (Strategien, Kettenmodus, Forschungslinien, Seed, Tiefe, Baum)
-//     * 2.37M Quelldatenbank-Explorer (Suche, Tabellenansicht, Deklarationsinspektor)
-//     * C++ Algorithmen-Editor (Editierbar, Speichern, Orakel-Test, Trace-Plot)
-//     * Autonome Evolution & Meta-Fusion (Familie A x B, Rollback, Provenienz)
-//     * C++ Agent Bridge (20 Artefakte-Matrix, 18-Punkte Selftest)
+// Flimmerfreie, hochperformante Synthese:
+// - WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS (100% flimmerfrei)
+// - Selektiver 60 FPS Orbit-Timer NUR im Orbital Nexus Modus
+// - 4 umschaltbare Design-Templates (Obsidian, Solaris, Cobalt, Biolith)
+// - Vollständiges Einstellungsmenü mit spürbarer 3-Stufen Schriftgrößenskalierung
+// - Vollständige Dark-Themierung für ListView und Editoren (kein grelles Weiß!)
+// - Alle manuellen Forschungswerkzeuge (K4D Lab, DB Explorer, C++ Lab, Meta-Fusion)
 // ============================================================================
 
 #ifndef UNICODE
@@ -33,6 +30,7 @@
 #include <commdlg.h>
 #include <dwmapi.h>
 #include <shellapi.h>
+#include <uxtheme.h>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -55,6 +53,7 @@
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "uxtheme.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #endif
@@ -215,7 +214,6 @@ struct StarParticle {
 
 struct HudState {
     HWND hwnd = nullptr;
-    HWND plotHwnd = nullptr;
 
     // Win32 Controls
     HWND rows = nullptr;
@@ -238,10 +236,8 @@ struct HudState {
     HWND evoFamBCombo = nullptr;
     HWND evoTargetFamBox = nullptr;
     HWND evoMetaFusionBtn = nullptr;
-    HWND evoCycleBtn = nullptr;
     HWND evoContinuousBtn = nullptr;
     HWND evoRollbackBtn = nullptr;
-    HWND evoStatusBtn = nullptr;
     HWND commandInput = nullptr;
 
     // Fonts
@@ -253,6 +249,11 @@ struct HudState {
     HFONT fontMono = nullptr;
     HFONT fontMonoSmall = nullptr;
     HFONT fontEditor = nullptr;
+
+    // Pre-allocated Brushes (kein Flackern!)
+    HBRUSH brushBg = nullptr;
+    HBRUSH brushCard = nullptr;
+    HBRUSH brushPanel = nullptr;
 
     // Design Settings
     int currentThemeIndex = 0; // 0=Obsidian, 1=Solaris, 2=Cobalt, 3=Biolith
@@ -350,6 +351,17 @@ inline const Theme& getActiveTheme() {
     return G_THEMES[g_hud.currentThemeIndex];
 }
 
+// Pre-allocated Brushes für Themes aktualisieren
+void updateThemeBrushes() {
+    const Theme& th = getActiveTheme();
+    if (g_hud.brushBg) DeleteObject(g_hud.brushBg);
+    if (g_hud.brushCard) DeleteObject(g_hud.brushCard);
+    if (g_hud.brushPanel) DeleteObject(g_hud.brushPanel);
+    g_hud.brushBg = CreateSolidBrush(th.bgObsidian);
+    g_hud.brushCard = CreateSolidBrush(th.bgCard);
+    g_hud.brushPanel = CreateSolidBrush(th.bgPanel);
+}
+
 // --- Chamfered Polygon Zeichnen ---
 void drawChamferedPolygon(HDC hdc, RECT rc, int cut, COLORREF fillCol, COLORREF borderCol, int borderWidth = 1) {
     if (rc.right <= rc.left || rc.bottom <= rc.top) return;
@@ -387,7 +399,56 @@ void applyChamferedWindowRegion(HWND hwnd, int w, int h) {
     SetWindowRgn(hwnd, rgn, TRUE);
 }
 
-// --- Schriftarten aktualisieren (nach Schriftgrößen-Änderung) ---
+// Dark-Mode Theme für ListView und Steuerelemente anwenden
+void applyThemeToControls() {
+    const Theme& th = getActiveTheme();
+    updateThemeBrushes();
+
+    if (g_hud.rows) {
+        ListView_SetBkColor(g_hud.rows, th.bgCard);
+        ListView_SetTextBkColor(g_hud.rows, th.bgCard);
+        ListView_SetTextColor(g_hud.rows, th.textMain);
+        SetWindowTheme(g_hud.rows, L"DarkMode_Explorer", nullptr);
+        HWND hdr = ListView_GetHeader(g_hud.rows);
+        if (hdr) SetWindowTheme(hdr, L"DarkMode_ItemsView", nullptr);
+        InvalidateRect(g_hud.rows, nullptr, TRUE);
+    }
+    if (g_hud.editor) {
+        SetWindowTheme(g_hud.editor, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.editor, nullptr, TRUE);
+    }
+    if (g_hud.searchBox) {
+        SetWindowTheme(g_hud.searchBox, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.searchBox, nullptr, TRUE);
+    }
+    if (g_hud.seedBox) {
+        SetWindowTheme(g_hud.seedBox, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.seedBox, nullptr, TRUE);
+    }
+    if (g_hud.countBox) {
+        SetWindowTheme(g_hud.countBox, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.countBox, nullptr, TRUE);
+    }
+    if (g_hud.evoTargetFamBox) {
+        SetWindowTheme(g_hud.evoTargetFamBox, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.evoTargetFamBox, nullptr, TRUE);
+    }
+    if (g_hud.commandInput) {
+        SetWindowTheme(g_hud.commandInput, L"DarkMode_Explorer", nullptr);
+        InvalidateRect(g_hud.commandInput, nullptr, TRUE);
+    }
+
+    HWND allBtns[] = {
+        g_hud.runBtn, g_hud.stopBtn, g_hud.chainFromBtn, g_hud.reportBtn,
+        g_hud.searchBtn, g_hud.saveBtn, g_hud.testBtn, g_hud.plotBtn,
+        g_hud.evoMetaFusionBtn, g_hud.evoContinuousBtn, g_hud.evoRollbackBtn
+    };
+    for (HWND b : allBtns) {
+        if (b) InvalidateRect(b, nullptr, TRUE);
+    }
+}
+
+// --- Schriftarten spürbar aktualisieren (Kompakt, Standard, Groß) ---
 void rebuildFonts() {
     if (g_hud.fontDisplayTitle) DeleteObject(g_hud.fontDisplayTitle);
     if (g_hud.fontDisplayLarge) DeleteObject(g_hud.fontDisplayLarge);
@@ -398,42 +459,72 @@ void rebuildFonts() {
     if (g_hud.fontMonoSmall)    DeleteObject(g_hud.fontMonoSmall);
     if (g_hud.fontEditor)       DeleteObject(g_hud.fontEditor);
 
-    int scaleOffset = 0;
-    if (g_hud.currentFontSize == FontSizeOption::Compact) scaleOffset = -2;
-    else if (g_hud.currentFontSize == FontSizeOption::Large) scaleOffset = +2;
+    int sizeUi = 13;
+    int sizeEditor = 14;
+    int sizeTitle = 22;
+    int sizeMid = 14;
 
-    g_hud.fontDisplayTitle = CreateFontW(-20 + scaleOffset, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    if (g_hud.currentFontSize == FontSizeOption::Compact) {
+        sizeUi = 10;
+        sizeEditor = 11;
+        sizeTitle = 17;
+        sizeMid = 11;
+    } else if (g_hud.currentFontSize == FontSizeOption::Large) {
+        sizeUi = 18;
+        sizeEditor = 20;
+        sizeTitle = 30;
+        sizeMid = 19;
+    }
+
+    g_hud.fontDisplayTitle = CreateFontW(-sizeTitle, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-    g_hud.fontDisplayLarge = CreateFontW(-16 + scaleOffset, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    g_hud.fontDisplayLarge = CreateFontW(-(sizeTitle - 4), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI Semibold");
-    g_hud.fontDisplayMid = CreateFontW(-13 + scaleOffset, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    g_hud.fontDisplayMid = CreateFontW(-sizeMid, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI Semibold");
-    g_hud.fontSansBold = CreateFontW(-13 + scaleOffset, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    g_hud.fontSansBold = CreateFontW(-sizeUi, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-    g_hud.fontSans = CreateFontW(-12 + scaleOffset, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_hud.fontSans = CreateFontW(-sizeUi, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-    g_hud.fontMono = CreateFontW(-13 + scaleOffset, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
+    g_hud.fontMono = CreateFontW(-sizeEditor, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Consolas");
-    g_hud.fontMonoSmall = CreateFontW(-11 + scaleOffset, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_hud.fontMonoSmall = CreateFontW(-(sizeUi - 2), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Consolas");
-    g_hud.fontEditor = CreateFontW(-14 + scaleOffset, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_hud.fontEditor = CreateFontW(-sizeEditor, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Consolas");
 
-    // Allen Steuerelementen Font zuweisen
-    if (g_hud.editor) SendMessageW(g_hud.editor, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontEditor), TRUE);
-    if (g_hud.rows) SendMessageW(g_hud.rows, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontSans), TRUE);
-    if (g_hud.commandInput) SendMessageW(g_hud.commandInput, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontMono), TRUE);
-    if (g_hud.searchBox) SendMessageW(g_hud.searchBox, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontMono), TRUE);
-    if (g_hud.countBox) SendMessageW(g_hud.countBox, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontMono), TRUE);
-    if (g_hud.seedBox) SendMessageW(g_hud.seedBox, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontMono), TRUE);
+    // Allen Child Controls rekursiv den neuen Font zuweisen
+    EnumChildWindows(g_hud.hwnd, [](HWND c, LPARAM lp) -> BOOL {
+        SendMessageW(c, WM_SETFONT, static_cast<WPARAM>(lp), TRUE);
+        InvalidateRect(c, nullptr, TRUE);
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(g_hud.fontSans));
+
+    if (g_hud.editor) {
+        SendMessageW(g_hud.editor, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontEditor), TRUE);
+        InvalidateRect(g_hud.editor, nullptr, TRUE);
+    }
+    if (g_hud.commandInput) {
+        SendMessageW(g_hud.commandInput, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontMono), TRUE);
+        InvalidateRect(g_hud.commandInput, nullptr, TRUE);
+    }
+    if (g_hud.rows) {
+        SendMessageW(g_hud.rows, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontSans), TRUE);
+        HWND hdr = ListView_GetHeader(g_hud.rows);
+        if (hdr) SendMessageW(hdr, WM_SETFONT, reinterpret_cast<WPARAM>(g_hud.fontSansBold), TRUE);
+        InvalidateRect(g_hud.rows, nullptr, TRUE);
+    }
+    if (g_hud.hwnd) {
+        InvalidateRect(g_hud.hwnd, nullptr, TRUE);
+    }
 }
 
 // Initialisiert die 4 Forschungs-Sphären
@@ -537,7 +628,6 @@ void initializeSpheres() {
     }
 }
 
-// Prüft Pfade zu Datenbanken
 void checkDatabasePaths() {
     std::array<fs::path, 4> candidates = {
         g_hud.projectRootPath / L"data" / L"research.sqlite",
@@ -739,7 +829,6 @@ void refreshMetaFusion() {
         "FROM generations ORDER BY created_at DESC, gen_index DESC LIMIT 200"
     );
 
-    // Familien-Combos befüllen
     if (g_hud.evoFamACombo && g_hud.evoFamBCombo) {
         ComboBox_ResetContent(g_hud.evoFamACombo);
         ComboBox_ResetContent(g_hud.evoFamBCombo);
@@ -856,7 +945,7 @@ void inspectSelectedTableRow() {
     }
 }
 
-// Schaltet Steuerelemente je nach Modus ein/aus
+// Schaltet Steuerelemente je nach Modus ein/aus & platziert sie sauber
 void updateControlLayout(int w, int h) {
     bool isNexus = (g_hud.currentMode == WorkspaceMode::OrbitalNexus);
     bool isLab = (g_hud.currentMode == WorkspaceMode::ResearchLab);
@@ -871,7 +960,7 @@ void updateControlLayout(int w, int h) {
     int contentTop = topBarH + 46;
     int contentH = h - contentTop - bottomBarH - 8;
 
-    // Table & Editor Layout (Zweispaltig oder Oben/Unten)
+    // Table & Editor Layout
     if (showTableAndEditor && g_hud.rows && g_hud.editor) {
         int tableW = static_cast<int>(w * 0.52);
         int editorW = w - tableW - 68;
@@ -885,86 +974,68 @@ void updateControlLayout(int w, int h) {
         if (g_hud.editor) ShowWindow(g_hud.editor, SW_HIDE);
     }
 
-    // Controls für K4D Lab
+    // Controls Sichtbarkeit und Positionierung exakt steuern
+    auto setVis = [](HWND ctrl, bool visible) {
+        if (ctrl) ShowWindow(ctrl, visible ? SW_SHOW : SW_HIDE);
+    };
+
     int ctrlY = topBarH + 8;
+
+    // 1. K4D Lab
     if (isLab) {
         MoveWindow(g_hud.strategyCombo, 32, ctrlY, 150, 200, TRUE);
         MoveWindow(g_hud.chainModeCombo, 190, ctrlY, 160, 200, TRUE);
         MoveWindow(g_hud.lineModeCombo, 358, ctrlY, 160, 200, TRUE);
         MoveWindow(g_hud.seedBox, 526, ctrlY, 80, 26, TRUE);
-        MoveWindow(g_hud.countBox, 614, ctrlY, 50, 26, TRUE);
-        MoveWindow(g_hud.runBtn, 672, ctrlY, 150, 28, TRUE);
-        MoveWindow(g_hud.stopBtn, 830, ctrlY, 70, 28, TRUE);
-        MoveWindow(g_hud.chainFromBtn, 908, ctrlY, 180, 28, TRUE);
-        MoveWindow(g_hud.reportBtn, 1096, ctrlY, 130, 28, TRUE);
-
-        ShowWindow(g_hud.strategyCombo, SW_SHOW);
-        ShowWindow(g_hud.chainModeCombo, SW_SHOW);
-        ShowWindow(g_hud.lineModeCombo, SW_SHOW);
-        ShowWindow(g_hud.seedBox, SW_SHOW);
-        ShowWindow(g_hud.countBox, SW_SHOW);
-        ShowWindow(g_hud.runBtn, SW_SHOW);
-        ShowWindow(g_hud.stopBtn, SW_SHOW);
-        ShowWindow(g_hud.chainFromBtn, SW_SHOW);
-        ShowWindow(g_hud.reportBtn, SW_SHOW);
-    } else {
-        if (g_hud.strategyCombo) ShowWindow(g_hud.strategyCombo, SW_HIDE);
-        if (g_hud.chainModeCombo) ShowWindow(g_hud.chainModeCombo, SW_HIDE);
-        if (g_hud.lineModeCombo) ShowWindow(g_hud.lineModeCombo, SW_HIDE);
-        if (g_hud.chainFromBtn) ShowWindow(g_hud.chainFromBtn, SW_HIDE);
-        if (g_hud.reportBtn) ShowWindow(g_hud.reportBtn, SW_HIDE);
+        MoveWindow(g_hud.runBtn, 614, ctrlY, 155, 28, TRUE);
+        MoveWindow(g_hud.stopBtn, 776, ctrlY, 70, 28, TRUE);
+        MoveWindow(g_hud.chainFromBtn, 854, ctrlY, 195, 28, TRUE);
+        MoveWindow(g_hud.reportBtn, 1056, ctrlY, 155, 28, TRUE);
     }
+    setVis(g_hud.strategyCombo, isLab);
+    setVis(g_hud.chainModeCombo, isLab);
+    setVis(g_hud.lineModeCombo, isLab);
+    setVis(g_hud.seedBox, isLab);
+    setVis(g_hud.runBtn, isLab);
+    setVis(g_hud.stopBtn, isLab);
+    setVis(g_hud.chainFromBtn, isLab);
+    setVis(g_hud.reportBtn, isLab);
 
-    // Controls für Quelldatenbank
+    // 2. Quelldatenbank
     if (isSrc) {
         MoveWindow(g_hud.searchBox, 32, ctrlY, 320, 26, TRUE);
         MoveWindow(g_hud.countBox, 360, ctrlY, 60, 26, TRUE);
         MoveWindow(g_hud.searchBtn, 428, ctrlY, 130, 28, TRUE);
-        ShowWindow(g_hud.searchBox, SW_SHOW);
-        ShowWindow(g_hud.countBox, SW_SHOW);
-        ShowWindow(g_hud.searchBtn, SW_SHOW);
-    } else {
-        if (g_hud.searchBox) ShowWindow(g_hud.searchBox, SW_HIDE);
-        if (g_hud.searchBtn) ShowWindow(g_hud.searchBtn, SW_HIDE);
     }
+    setVis(g_hud.searchBox, isSrc);
+    setVis(g_hud.countBox, isSrc);
+    setVis(g_hud.searchBtn, isSrc);
 
-    // Controls für C++ Editor Lab
+    // 3. C++ Editor Lab
     if (isCpp) {
-        MoveWindow(g_hud.saveBtn, 32, ctrlY, 160, 28, TRUE);
-        MoveWindow(g_hud.testBtn, 200, ctrlY, 180, 28, TRUE);
-        MoveWindow(g_hud.plotBtn, 388, ctrlY, 160, 28, TRUE);
-        ShowWindow(g_hud.saveBtn, SW_SHOW);
-        ShowWindow(g_hud.testBtn, SW_SHOW);
-        ShowWindow(g_hud.plotBtn, SW_SHOW);
-    } else {
-        if (g_hud.saveBtn) ShowWindow(g_hud.saveBtn, SW_HIDE);
-        if (g_hud.testBtn) ShowWindow(g_hud.testBtn, SW_HIDE);
-        if (g_hud.plotBtn) ShowWindow(g_hud.plotBtn, SW_HIDE);
+        MoveWindow(g_hud.saveBtn, 32, ctrlY, 185, 28, TRUE);
+        MoveWindow(g_hud.testBtn, 225, ctrlY, 180, 28, TRUE);
+        MoveWindow(g_hud.plotBtn, 413, ctrlY, 170, 28, TRUE);
     }
+    setVis(g_hud.saveBtn, isCpp);
+    setVis(g_hud.testBtn, isCpp);
+    setVis(g_hud.plotBtn, isCpp);
 
-    // Controls für Meta-Fusion
+    // 4. Meta-Fusion
     if (isEvo) {
         MoveWindow(g_hud.evoFamACombo, 32, ctrlY, 170, 200, TRUE);
         MoveWindow(g_hud.evoFamBCombo, 210, ctrlY, 170, 200, TRUE);
         MoveWindow(g_hud.evoTargetFamBox, 388, ctrlY, 160, 26, TRUE);
-        MoveWindow(g_hud.evoMetaFusionBtn, 556, ctrlY, 160, 28, TRUE);
-        MoveWindow(g_hud.evoContinuousBtn, 724, ctrlY, 150, 28, TRUE);
-        MoveWindow(g_hud.evoRollbackBtn, 882, ctrlY, 140, 28, TRUE);
-
-        ShowWindow(g_hud.evoFamACombo, SW_SHOW);
-        ShowWindow(g_hud.evoFamBCombo, SW_SHOW);
-        ShowWindow(g_hud.evoTargetFamBox, SW_SHOW);
-        ShowWindow(g_hud.evoMetaFusionBtn, SW_SHOW);
-        ShowWindow(g_hud.evoContinuousBtn, SW_SHOW);
-        ShowWindow(g_hud.evoRollbackBtn, SW_SHOW);
-    } else {
-        if (g_hud.evoFamACombo) ShowWindow(g_hud.evoFamACombo, SW_HIDE);
-        if (g_hud.evoFamBCombo) ShowWindow(g_hud.evoFamBCombo, SW_HIDE);
-        if (g_hud.evoTargetFamBox) ShowWindow(g_hud.evoTargetFamBox, SW_HIDE);
-        if (g_hud.evoMetaFusionBtn) ShowWindow(g_hud.evoMetaFusionBtn, SW_HIDE);
-        if (g_hud.evoContinuousBtn) ShowWindow(g_hud.evoContinuousBtn, SW_HIDE);
-        if (g_hud.evoRollbackBtn) ShowWindow(g_hud.evoRollbackBtn, SW_HIDE);
+        MoveWindow(g_hud.evoMetaFusionBtn, 556, ctrlY, 180, 28, TRUE);
+        MoveWindow(g_hud.evoContinuousBtn, 744, ctrlY, 170, 28, TRUE);
+        MoveWindow(g_hud.evoRollbackBtn, 922, ctrlY, 180, 28, TRUE);
     }
+    setVis(g_hud.evoFamACombo, isEvo);
+    setVis(g_hud.evoFamBCombo, isEvo);
+    setVis(g_hud.evoTargetFamBox, isEvo);
+    setVis(g_hud.evoMetaFusionBtn, isEvo);
+    setVis(g_hud.evoContinuousBtn, isEvo);
+    setVis(g_hud.evoRollbackBtn, isEvo);
 
     if (!isLab && !isSrc) {
         if (!isLab && g_hud.seedBox) ShowWindow(g_hud.seedBox, SW_HIDE);
@@ -984,6 +1055,8 @@ void updateControlLayout(int w, int h) {
             ShowWindow(g_hud.commandInput, SW_HIDE);
         }
     }
+
+    applyThemeToControls();
 }
 
 void switchWorkspace(WorkspaceMode mode) {
@@ -1087,7 +1160,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
     const auto& activeSphere = g_hud.spheres[static_cast<size_t>(g_hud.activeSphereIndex)];
 
     // 4. TOP HEADER BAR
-    // System-Puls
     int pulseGlow = static_cast<int>(std::sin(g_hud.animPhase * 3.0) * 4.0);
     int pRad = 6 + pulseGlow;
     HBRUSH pulseBrush = CreateSolidBrush(th.accentPrimary);
@@ -1100,7 +1172,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
     SetTextColor(memDc, RGB(255, 255, 255));
     TextOutW(memDc, 48, 18, L"AXION", 5);
 
-    // Version-Badge
     RECT verBadgeRc{112, 20, 230, 38};
     drawChamferedPolygon(memDc, verBadgeRc, 4, RGB(10, 32, 48), th.accentPrimary, 1);
     SelectObject(memDc, g_hud.fontMonoSmall);
@@ -1225,7 +1296,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         SelectObject(memDc, oldPen);
         DeleteObject(orbPen);
 
-        // Sphären & Verbindungsvektoren
         for (size_t i = 0; i < g_hud.spheres.size(); ++i) {
             auto& sp = g_hud.spheres[i];
             double dynAngle = sp.baseAngleRad + (g_hud.enableOrbitAnimation ? std::sin(g_hud.animPhase * 0.35 + static_cast<double>(i)) * 0.04 : 0.0);
@@ -1270,7 +1340,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             DrawTextW(memDc, sp.shortLabelBottom.c_str(), -1, &rBot, DT_CENTER | DT_SINGLELINE);
         }
 
-        // AXION CORE mit rotierendem 4D Hypercube
         int coreR = 54 + (g_hud.enableOrbitAnimation ? static_cast<int>(std::sin(g_hud.animPhase * 2.2) * 3.0) : 0);
         HBRUSH coreB = CreateSolidBrush(RGB(10, 18, 32));
         HPEN coreP = CreatePen(PS_SOLID, 2, activeSphere.accentColor);
@@ -1334,7 +1403,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         RECT descRc{panelRc.left + 18, panelRc.top + 64, panelRc.right - 18, panelRc.top + 98};
         DrawTextW(memDc, activeSphere.description.c_str(), -1, &descRc, DT_LEFT | DT_WORDBREAK);
 
-        // 3 Karten
         int cardTop = panelRc.top + 104;
         int cardH = 84;
         for (size_t c = 0; c < activeSphere.cards.size(); ++c) {
@@ -1383,7 +1451,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         SelectObject(memDc, oldPen);
         DeleteObject(wavePen);
 
-        // Großer Primär-Aktionsbutton
         RECT actionBtnRc{panelRc.left + 16, panelRc.bottom - 54, panelRc.right - 16, panelRc.bottom - 14};
         COLORREF btnFill = g_hud.primaryBtnHovered ? RGB(20, 56, 82) : RGB(14, 38, 58);
         drawChamferedPolygon(memDc, actionBtnRc, 8, btnFill, activeSphere.accentColor, 2);
@@ -1446,12 +1513,16 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         SetTextColor(memDc, RGB(255, 255, 255));
         DrawTextW(memDc, L"18-PUNKTE SELFTEST SUITE AUSFÜHREN (axion_engine.exe selftest)", -1, &stBtnRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
+    else {
+        // Hintergrundpanel für die Toolbar im aktiven Arbeitsbereich
+        RECT toolbarBg{24, 68, w - 24, 102};
+        drawChamferedPolygon(memDc, toolbarBg, 8, th.bgPanel, th.borderMuted, 1);
+    }
 
     // 6. BOTTOM AMBIENT COMMAND DOCK
     RECT dockRc{24, h - 64, w - 24, h - 18};
     drawChamferedPolygon(memDc, dockRc, 10, th.bgPanel, th.borderMuted, 1);
 
-    // 6 Workspace-Umschalter
     struct ModeBtnInfo { WorkspaceMode mode; const wchar_t* label; int width; };
     const ModeBtnInfo modeBtns[6] = {
         {WorkspaceMode::OrbitalNexus, L"ORBITAL NEXUS", 120},
@@ -1512,7 +1583,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             DrawTextW(memDc, g_hud.liveFooterStatus.c_str(), -1, &footTextRc, DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
         }
     } else {
-        // Status im Dock ganz rechts
         int footerTextLeft = btnX + 16;
         if (footerTextLeft < dockRc.right - 30) {
             HBRUSH dotB = CreateSolidBrush(th.accentSecondary);
@@ -1546,7 +1616,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         SetTextColor(memDc, RGB(255, 255, 255));
         TextOutW(memDc, mBox.left + 24, mBox.top + 40, L"AXION Design-Templates & UI-Skalierung", 38);
 
-        // 4 Design-Templates zur Auswahl
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.textMain);
         TextOutW(memDc, mBox.left + 24, mBox.top + 76, L"Farbschema / Theme wählen (4 Vorlagen):", 40);
@@ -1565,7 +1634,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             COLORREF border = isSel ? G_THEMES[i].accentPrimary : (isHov ? RGB(100, 140, 180) : th.borderMuted);
             drawChamferedPolygon(memDc, tRc, 6, fill, border, isSel ? 2 : 1);
 
-            // Farbindikator-Punkte
             HBRUSH d1 = CreateSolidBrush(G_THEMES[i].bgObsidian);
             HBRUSH d2 = CreateSolidBrush(G_THEMES[i].accentPrimary);
             HBRUSH d3 = CreateSolidBrush(G_THEMES[i].accentSecondary);
@@ -1588,27 +1656,24 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
             TextOutW(memDc, tRc.left + 72, tRc.top + 32, isSel ? L"AKTIV" : L"KLICKEN ZUM AKTIVIEREN", isSel ? 5 : 22);
         }
 
-        // Schriftgrößen-Auswahl
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.textMain);
         TextOutW(memDc, mBox.left + 24, mBox.top + 244, L"Schriftgröße / UI-Skalierung:", 29);
 
-        const wchar_t* fontLabels[3] = {L"Kompakt (-2px)", L"Standard (Default)", L"Groß (+2px)"};
+        const wchar_t* fontLabels[3] = {L"Kompakt (-3px)", L"Standard (Default)", L"Groß (+5px)"};
         int fBtnW = (mBox.right - mBox.left - 64) / 3;
         for (int i = 0; i < 3; ++i) {
             int fx = mBox.left + 24 + i * (fBtnW + 8);
             RECT fRc{fx, mBox.top + 268, fx + fBtnW, mBox.top + 304};
             bool isSel = (static_cast<int>(g_hud.currentFontSize) == i);
-            bool isHov = (g_hud.hoveredFontSizeBtn == i);
 
-            drawChamferedPolygon(memDc, fRc, 6, isSel ? RGB(20, 52, 75) : (isHov ? RGB(16, 36, 56) : th.bgCard),
+            drawChamferedPolygon(memDc, fRc, 6, isSel ? RGB(20, 52, 75) : th.bgCard,
                                  isSel ? th.accentPrimary : th.borderMuted, 1);
             SelectObject(memDc, g_hud.fontMonoSmall);
             SetTextColor(memDc, isSel ? th.accentPrimary : th.textMain);
             DrawTextW(memDc, fontLabels[i], -1, &fRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         }
 
-        // Grafik-Optionen (Animation & Partikel)
         SelectObject(memDc, g_hud.fontSansBold);
         SetTextColor(memDc, th.textMain);
         TextOutW(memDc, mBox.left + 24, mBox.top + 324, L"Grafik & Performance:", 22);
@@ -1631,7 +1696,6 @@ void renderSpatialHud(HWND hwnd, HDC targetDc) {
         SetTextColor(memDc, g_hud.enableGrid ? th.accentSecondary : th.textMuted);
         DrawTextW(memDc, g_hud.enableGrid ? L"Gitter: AN" : L"Gitter: AUS", -1, &optGrid, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
-        // Schließen-Button
         RECT sCloseRc{mBox.right - 140, mBox.bottom - 46, mBox.right - 24, mBox.bottom - 16};
         drawChamferedPolygon(memDc, sCloseRc, 6, RGB(14, 38, 60), th.accentPrimary, 1);
         SelectObject(memDc, g_hud.fontMonoSmall);
@@ -1712,6 +1776,9 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         INITCOMMONCONTROLSEX icex{sizeof(icex), ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES};
         InitCommonControlsEx(&icex);
 
+        // Pre-allocated Brushes
+        updateThemeBrushes();
+
         // Win32 Controls erzeugen
         g_hud.rows = CreateWindowExW(
             WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
@@ -1754,33 +1821,33 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_hud.countBox = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"4", WS_CHILD | ES_NUMBER,
             0, 0, 50, 24, hwnd, reinterpret_cast<HMENU>(ID_COUNT_BOX), nullptr, nullptr);
 
-        g_hud.runBtn = CreateWindowW(L"BUTTON", L"Forschung starten", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.runBtn = CreateWindowW(L"BUTTON", L"Forschung starten", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 120, 28, hwnd, reinterpret_cast<HMENU>(ID_RUN_BTN), nullptr, nullptr);
 
-        g_hud.stopBtn = CreateWindowW(L"BUTTON", L"Stop", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.stopBtn = CreateWindowW(L"BUTTON", L"Stop", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 60, 28, hwnd, reinterpret_cast<HMENU>(ID_STOP_BTN), nullptr, nullptr);
 
-        g_hud.chainFromBtn = CreateWindowW(L"BUTTON", L"Kette ab Auswahl vertiefen", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.chainFromBtn = CreateWindowW(L"BUTTON", L"Kette ab Auswahl vertiefen", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 160, 28, hwnd, reinterpret_cast<HMENU>(ID_CHAINFROM_BTN), nullptr, nullptr);
 
-        g_hud.reportBtn = CreateWindowW(L"BUTTON", L"Forschungsbericht", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.reportBtn = CreateWindowW(L"BUTTON", L"Forschungsbericht", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 120, 28, hwnd, reinterpret_cast<HMENU>(ID_REPORT_BTN), nullptr, nullptr);
 
         // Quelle / Suche
         g_hud.searchBox = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"prime", WS_CHILD | ES_AUTOHSCROLL,
             0, 0, 200, 24, hwnd, reinterpret_cast<HMENU>(ID_SEARCH_BOX), nullptr, nullptr);
 
-        g_hud.searchBtn = CreateWindowW(L"BUTTON", L"Suchen / Laden", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.searchBtn = CreateWindowW(L"BUTTON", L"Suchen / Laden", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 120, 28, hwnd, reinterpret_cast<HMENU>(ID_SEARCH_BTN), nullptr, nullptr);
 
         // C++ Editor Lab
-        g_hud.saveBtn = CreateWindowW(L"BUTTON", L"Änderungen speichern", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.saveBtn = CreateWindowW(L"BUTTON", L"Änderungen speichern", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 140, 28, hwnd, reinterpret_cast<HMENU>(ID_SAVE_BTN), nullptr, nullptr);
 
-        g_hud.testBtn = CreateWindowW(L"BUTTON", L"Algorithmus testen", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.testBtn = CreateWindowW(L"BUTTON", L"Algorithmus testen", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 140, 28, hwnd, reinterpret_cast<HMENU>(ID_TEST_BTN), nullptr, nullptr);
 
-        g_hud.plotBtn = CreateWindowW(L"BUTTON", L"Trace-Plot öffnen", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.plotBtn = CreateWindowW(L"BUTTON", L"Trace-Plot öffnen", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 130, 28, hwnd, reinterpret_cast<HMENU>(ID_PLOT_BTN), nullptr, nullptr);
 
         // Meta-Fusion Controls
@@ -1790,11 +1857,11 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             0, 0, 160, 200, hwnd, reinterpret_cast<HMENU>(ID_EVO_FAMB), nullptr, nullptr);
         g_hud.evoTargetFamBox = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"HYBRID_ROPE_GALOIS", WS_CHILD | ES_AUTOHSCROLL,
             0, 0, 160, 24, hwnd, reinterpret_cast<HMENU>(ID_EVO_TARGETFAM), nullptr, nullptr);
-        g_hud.evoMetaFusionBtn = CreateWindowW(L"BUTTON", L"Meta-Fusion starten", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.evoMetaFusionBtn = CreateWindowW(L"BUTTON", L"Meta-Fusion starten", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 150, 28, hwnd, reinterpret_cast<HMENU>(ID_EVO_METAFUSION_BTN), nullptr, nullptr);
-        g_hud.evoContinuousBtn = CreateWindowW(L"BUTTON", L"Kontinuierlich (10x)", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.evoContinuousBtn = CreateWindowW(L"BUTTON", L"Kontinuierlich (10x)", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 140, 28, hwnd, reinterpret_cast<HMENU>(ID_EVO_CONTINUOUS_BTN), nullptr, nullptr);
-        g_hud.evoRollbackBtn = CreateWindowW(L"BUTTON", L"Rollback (Checkpoint)", WS_CHILD | BS_PUSHBUTTON,
+        g_hud.evoRollbackBtn = CreateWindowW(L"BUTTON", L"Rollback (Checkpoint)", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW,
             0, 0, 150, 28, hwnd, reinterpret_cast<HMENU>(ID_EVO_ROLLBACK_BTN), nullptr, nullptr);
 
         // Ambient Command Input
@@ -1805,6 +1872,9 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         );
 
         rebuildFonts();
+        applyThemeToControls();
+
+        // 60 FPS Timer (wird selektiv im Nexus genutzt)
         SetTimer(hwnd, 1, 16, nullptr);
         return 0;
     }
@@ -1819,7 +1889,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 
     case WM_ERASEBKGND:
-        return 1;
+        return 1; // Verhindert Flackern vollständig
 
     case WM_PAINT: {
         PAINTSTRUCT ps{};
@@ -1829,10 +1899,68 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     }
 
+    case WM_DRAWITEM: {
+        auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lp);
+        if (dis && dis->CtlType == ODT_BUTTON) {
+            const Theme& th = getActiveTheme();
+            bool isPressed = (dis->itemState & ODS_SELECTED);
+            bool isDisabled = (dis->itemState & ODS_DISABLED);
+
+            COLORREF bgCol = isPressed ? th.bgPanel : th.bgCard;
+            COLORREF borderCol = isPressed ? th.accentPrimary : th.borderMuted;
+            if (isDisabled) {
+                bgCol = th.bgObsidian;
+                borderCol = th.borderMuted;
+            }
+
+            HBRUSH hbr = CreateSolidBrush(bgCol);
+            HPEN hp = CreatePen(PS_SOLID, 1, borderCol);
+            HGDIOBJ oldBr = SelectObject(dis->hDC, hbr);
+            HGDIOBJ oldPen = SelectObject(dis->hDC, hp);
+
+            RoundRect(dis->hDC, dis->rcItem.left, dis->rcItem.top, dis->rcItem.right, dis->rcItem.bottom, 6, 6);
+
+            SelectObject(dis->hDC, oldBr);
+            SelectObject(dis->hDC, oldPen);
+            DeleteObject(hbr);
+            DeleteObject(hp);
+
+            wchar_t btnText[256] = {0};
+            GetWindowTextW(dis->hwndItem, btnText, 255);
+
+            SetBkMode(dis->hDC, TRANSPARENT);
+            SetTextColor(dis->hDC, isDisabled ? th.textMuted : (isPressed ? RGB(255, 255, 255) : th.accentPrimary));
+            SelectObject(dis->hDC, g_hud.fontSansBold ? g_hud.fontSansBold : GetStockObject(DEFAULT_GUI_FONT));
+
+            RECT rcText = dis->rcItem;
+            DrawTextW(dis->hDC, btnText, -1, &rcText, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            return TRUE;
+        }
+        break;
+    }
+
     case WM_NOTIFY: {
         LPNMHDR nm = reinterpret_cast<LPNMHDR>(lp);
-        if (nm->idFrom == ID_ROWS && (nm->code == LVN_ITEMCHANGED || nm->code == NM_CLICK)) {
-            inspectSelectedTableRow();
+        if (nm->idFrom == ID_ROWS) {
+            if (nm->code == NM_CUSTOMDRAW) {
+                auto* nmlvcd = reinterpret_cast<NMLVCUSTOMDRAW*>(lp);
+                const Theme& th = getActiveTheme();
+                switch (nmlvcd->nmcd.dwDrawStage) {
+                case CDDS_PREPAINT:
+                    return CDRF_NOTIFYITEMDRAW;
+                case CDDS_ITEMPREPAINT: {
+                    bool isEven = (nmlvcd->nmcd.dwItemSpec % 2 == 0);
+                    nmlvcd->clrTextBk = isEven ? th.bgCard : th.bgPanel;
+                    nmlvcd->clrText = th.textMain;
+                    return CDRF_NEWFONT;
+                }
+                default:
+                    return CDRF_DODEFAULT;
+                }
+            }
+            if (nm->code == LVN_ITEMCHANGED || nm->code == NM_CLICK) {
+                inspectSelectedTableRow();
+            }
         }
         break;
     }
@@ -1924,7 +2052,6 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int w = rc.right;
         int h = rc.bottom;
 
-        // Modals fangen Hover ab
         if (g_hud.settingsModalOpen) {
             RECT mBox{w / 2 - 360, h / 2 - 250, w / 2 + 360, h / 2 + 250};
             int cardW = (mBox.right - mBox.left - 64) / 2;
@@ -1947,10 +2074,12 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     break;
                 }
             }
+            InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
 
         // Header Buttons Hover
+        int prevTop = g_hud.hoveredTopButton;
         g_hud.hoveredTopButton = 0;
         if (my >= 18 && my <= 46) {
             if (mx >= w - 280 && mx <= w - 196) g_hud.hoveredTopButton = 1;      // Settings
@@ -1962,6 +2091,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         // Workspace Buttons Hover im Dock
         RECT dockRc{24, h - 64, w - 24, h - 18};
+        int prevWs = g_hud.hoveredWorkspaceBtn;
         g_hud.hoveredWorkspaceBtn = -1;
         if (my >= dockRc.top + 8 && my <= dockRc.bottom - 8) {
             int btnX = dockRc.left + 12;
@@ -1973,6 +2103,10 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 }
                 btnX += widths[i] + 6;
             }
+        }
+
+        if (prevTop != g_hud.hoveredTopButton || prevWs != g_hud.hoveredWorkspaceBtn) {
+            InvalidateRect(hwnd, nullptr, FALSE);
         }
 
         // Nexus: Sphären & Buttons Hover
@@ -2026,6 +2160,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
             if (g_hud.hoveredThemeCard >= 0) {
                 g_hud.currentThemeIndex = g_hud.hoveredThemeCard;
+                applyThemeToControls();
                 InvalidateRect(hwnd, nullptr, FALSE);
                 return 0;
             }
@@ -2144,18 +2279,22 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 
     case WM_TIMER: {
-        if (g_hud.enableOrbitAnimation) {
-            g_hud.animPhase += 0.035 * (1.0 + g_hud.cycleBoost);
-            g_hud.wavePhase += 0.07 * (1.0 + g_hud.cycleBoost);
-            g_hud.cycleBoost *= 0.96;
+        // FLIMMERFREI: 60 FPS Animation NUR im OrbitalNexus Modus ausführen!
+        if (g_hud.currentMode == WorkspaceMode::OrbitalNexus) {
+            if (g_hud.enableOrbitAnimation) {
+                g_hud.animPhase += 0.035 * (1.0 + g_hud.cycleBoost);
+                g_hud.wavePhase += 0.07 * (1.0 + g_hud.cycleBoost);
+                g_hud.cycleBoost *= 0.96;
 
-            for (auto& st : g_hud.stars) {
-                st.y -= st.speed * (1.0f + static_cast<float>(g_hud.cycleBoost));
-                if (st.y < 0.0f) st.y = 1.0f;
+                for (auto& st : g_hud.stars) {
+                    st.y -= st.speed * (1.0f + static_cast<float>(g_hud.cycleBoost));
+                    if (st.y < 0.0f) st.y = 1.0f;
+                }
+                InvalidateRect(hwnd, nullptr, FALSE);
             }
         }
 
-        // Prozess-Überwachung
+        // Prozess-Überwachung im Hintergrund
         if (g_hud.processRunning && g_hud.activeProcess.hProcess) {
             DWORD code = STILL_ACTIVE;
             if (GetExitCodeProcess(g_hud.activeProcess.hProcess, &code) && code != STILL_ACTIVE) {
@@ -2164,16 +2303,16 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 g_hud.activeProcess = {};
                 g_hud.processRunning = false;
                 g_hud.liveFooterStatus = L"Zyklus beendet (ExitCode " + std::to_wstring(code) + L") • SQLite WAL aktualisiert";
-                // Tabelle im aktiven Modus neu laden
                 if (g_hud.currentMode == WorkspaceMode::ResearchLab) refreshK4dLab();
                 else if (g_hud.currentMode == WorkspaceMode::CppEditorLab) refreshCppEditorLab();
                 else if (g_hud.currentMode == WorkspaceMode::MetaFusion) refreshMetaFusion();
+                InvalidateRect(hwnd, nullptr, FALSE);
             }
         }
-        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     }
 
+    // Controls mit Theme-Farben zeichnen (kein GDI-Leak, pre-allocated brush!)
     case WM_CTLCOLORSTATIC:
     case WM_CTLCOLOREDIT:
     case WM_CTLCOLORLISTBOX:
@@ -2182,10 +2321,7 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         const Theme& th = getActiveTheme();
         SetTextColor(hdc, th.textMain);
         SetBkColor(hdc, th.bgCard);
-        static HBRUSH s_ctrlBrush = nullptr;
-        if (s_ctrlBrush) DeleteObject(s_ctrlBrush);
-        s_ctrlBrush = CreateSolidBrush(th.bgCard);
-        return reinterpret_cast<LRESULT>(s_ctrlBrush);
+        return reinterpret_cast<LRESULT>(g_hud.brushCard);
     }
 
     case WM_DESTROY: {
@@ -2195,6 +2331,9 @@ LRESULT CALLBACK SpatialHudWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             CloseHandle(g_hud.activeProcess.hProcess);
             CloseHandle(g_hud.activeProcess.hThread);
         }
+        if (g_hud.brushBg)    DeleteObject(g_hud.brushBg);
+        if (g_hud.brushCard)  DeleteObject(g_hud.brushCard);
+        if (g_hud.brushPanel) DeleteObject(g_hud.brushPanel);
         if (g_hud.fontDisplayTitle) DeleteObject(g_hud.fontDisplayTitle);
         if (g_hud.fontDisplayLarge) DeleteObject(g_hud.fontDisplayLarge);
         if (g_hud.fontDisplayMid)   DeleteObject(g_hud.fontDisplayMid);
@@ -2235,11 +2374,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int showCmd) {
     wc.hbrBackground = CreateSolidBrush(RGB(6, 9, 17));
     RegisterClassExW(&wc);
 
+    // WS_CLIPCHILDREN | WS_CLIPSIBLINGS: Verhindert jegliches Flackern der Child-Controls
     HWND hwnd = CreateWindowExW(
         WS_EX_APPWINDOW,
         wc.lpszClassName,
         L"AXION // SPATIAL ORBITAL HUD v4.0.3",
-        WS_POPUP | WS_VISIBLE,
+        WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         80, 40, 1540, 930,
         nullptr, nullptr, instance, nullptr
     );
